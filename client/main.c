@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         return (EXIT_FAILURE);
     }
     //Si es cero, entonces es el subproceso, es el que va a estar recibiendo los nuevos mensajes
-    else if(pid = 0){
+    else if(pid == 0){
         
     }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
