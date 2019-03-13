@@ -53,3 +53,5 @@ dkms.conf
 
 #MacOS Files
 .MACOSX/
+/server/build/
+/server/dist/
