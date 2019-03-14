@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     int addrlen = sizeof(address);
     char buffer[BUFFER_SIZE] = {0};
     //Primero creo un handler para el socket del servidor
-    if(server_fd = socket(AF_INET, SOCK_STREAM, 0) == 0){//@TODO: Eliminar el == 0
+    if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){//@TODO: Eliminar el == 0
         //Ocurrió un error al crear el socket
         perror("Socket creation error");
         return EXIT_FAILURE;
@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
         perror("Socket couldn't be signaled to listen");
         return EXIT_FAILURE;
     }
+    printf("Initialization Success, listening on port %d\n", PORT);
     //Por siempre:
     while(1){
         //Intento aceptar una nueva conexión

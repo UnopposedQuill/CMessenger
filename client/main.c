@@ -17,6 +17,7 @@
 #include <netinet/in.h> 
 #include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 //Me interesa definir este puerto aquí
 #define PORT 8080 
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
         char data[] = "Prueba 1";
         
         //Ahora intentaré hacer el socket nuevo
-        if(socket_handler = socket(AF_INET, SOCK_STREAM) < 0){
+        if(socket_handler = socket(AF_INET, SOCK_STREAM, 0) < 0){
             perror("Socket creation error");
             return EXIT_FAILURE;
         }
