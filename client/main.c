@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         char data[] = "Prueba 1";
         
         //Ahora intentaré hacer el socket nuevo
-        if(socket_handler = socket(AF_INET, SOCK_STREAM, 0) < 0){
+        if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
             return EXIT_FAILURE;
         }
