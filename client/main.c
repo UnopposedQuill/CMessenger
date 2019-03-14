@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
         }
         
         //Ahora intento escribirle
-        if(valread = send(socket_handler, data, strlen(data), 0) < 0){
+        if((valread = send(socket_handler, data, strlen(data), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
