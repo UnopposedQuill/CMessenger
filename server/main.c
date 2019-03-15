@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
-#define PORT 8080
+#define PORT 15000
 //También colocar la cantidad de conexiones a la espera
 #define MAX_WAITING_CONNECTIONS 3
 //Finalmente el tamaño del buffer
@@ -73,12 +73,12 @@ int main(int argc, char** argv) {
         //Intento aceptar una nueva conexión
         if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
             //No pudo aceptarla
-            perror("Error al aceptar un socket nuevo");
+            perror("Error upon accepting a new connection");
         }
         else{
             //Pudo aceptarla, intento leer los datos
             if((valread = read(new_socket, buffer, BUFFER_SIZE)) < -1){
-                perror("Error al intentar leer los datos");
+                perror("Error upon reading new data");
             }
             else{
                 //en este momento valread contiene la cantidad de bytes leídos
