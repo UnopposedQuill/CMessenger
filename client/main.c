@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         int socket_handler = 0, valread;
         
         //Los datos que se le enviarán al servidor
-        char data[] = "Prueba 1";
+        char data[] = "0Prueba";
         
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){

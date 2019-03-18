@@ -12,11 +12,10 @@
  */
 
 #include <string.h>
-
 #include "estructuras.h"
 
 //Funciones Lista de Clientes
-void insertarAlInicio(struct ListaClientes * self, struct NodoCliente * nc){
+void insertarClienteAlInicio(struct ListaClientes * self, struct NodoCliente * nc){
     nc->siguiente = self->primerNodo;
     self->primerNodo = nc;
     return;
@@ -31,13 +30,13 @@ void imprimirListaClientes(struct ListaClientes * self){
     return;
 }
 
-int cantidadClientes(ListaClientes* self){
+int cantidadClientes(struct ListaClientes* self){
     struct NodoCliente * recorreNodos = self->primerNodo;
-    cantidadClientes = 0;
+    int resultado = 0;
     while(recorreNodos != NULL){
-        cantidadClientes++;
+        resultado++;
     }
-    return cantidadClientes;
+    return resultado;
 }
 
 int existeCliente(struct ListaClientes * self, const char * nombreUsuario){
@@ -51,7 +50,7 @@ int existeCliente(struct ListaClientes * self, const char * nombreUsuario){
 }
 
 //Funciones Lista Mensajes
-void insertarAlInicio(struct ListaMensajes * self, struct NodoMensaje* nm){
+void insertarMensajeAlInicio(struct ListaMensajes * self, struct NodoMensaje* nm){
     nm->siguiente = self->primerNodo;
     self->primerNodo = nm;
     return;
@@ -71,11 +70,11 @@ void imprimirListaMensajes(struct ListaMensajes * self){
     return;
 }
 
-int cantidadMensajes(ListaMensajes* self){
+int cantidadMensajes(struct ListaMensajes* self){
     struct NodoMensaje * recorreNodos = self->primerNodo;
-    cantidadMensajes = 0;
+    int resultado = 0;
     while(recorreNodos != NULL){
-        cantidadMensajes++;
+        resultado;
     }
-    return cantidadMensajes;
+    return resultado;
 }

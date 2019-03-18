@@ -59,14 +59,14 @@ struct ListaMensajes{
 };
 
 //Funciones de Manipulación de Listas de Clientes
-void insertarAlInicio(struct ListaClientes *, struct NodoCliente *);
+void insertarClienteAlInicio(struct ListaClientes *, struct NodoCliente *);
 void imprimirListaClientes(struct ListaClientes *);
 int cantidadClientes(struct ListaClientes *);
-int existeCliente(struct ListaClientes *);
+int existeCliente(struct ListaClientes *, const char *);
 
 //Funciones de Manipulación de Listas de Mensajes
-void insertarAlInicio(struct ListaMensajes *, struct NodoMensaje *);
+void insertarMensajeAlInicio(struct ListaMensajes *, struct NodoMensaje *);
 void imprimirListaMensajes(struct ListaMensajes *);
-int cantidadMensajes(struct ListaClientes *);
+int cantidadMensajes(struct ListaMensajes *);
 
 #endif /* ESTRUCTURAS_H */

@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <string.h>
 #include "estructuras.h"
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
     
     //Primero crea los sitios donde guardará los datos del servidor
     struct ListaClientes clientes = {NULL};
-    
+    struct ListaMensajes mensajes = {NULL};
     /*
     insertarAlInicio(&clientes, (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente)));
     
@@ -91,17 +92,52 @@ int main(int argc, char** argv) {
         }
         else{
             //Pudo aceptarla, intento leer los datos
-            if((valread = read(new_socket, buffer, BUFFER_SIZE)) < -1){
+            //Primero tengo que leer el primer byte, el cual me dirá qué acción tengo que tomar
+            if((valread = read(new_socket, buffer, 1)) < -1){
                 perror("Error upon reading new data");
             }
             else{
                 //en este momento valread contiene la cantidad de bytes leídos
                 //Por ahora sólo le ordenaré al servidor imprimir todo lo que lee
-                printf("%s\n", buffer);
+                char directiva = buffer[0] - '0';
+                switch(directiva){
+                    case 0:{
+                        //tengo que registrar un nuevo usuario, primero creo las variables que guardarán su información
+                        struct Cliente * c = (struct Cliente *)calloc(1, sizeof(struct Cliente));
+                        struct NodoCliente * nc = (struct NodoCliente *)calloc(1, sizeof(struct NodoCliente));
+                        //Asignar el cliente al nodo...
+                        nc->cliente = c;
+                        //Ahora conseguir el supuesto nombre del usuario
+                        if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
+                            //logró conseguirlo, creo un buffer para el nombre del cliente
+                            char * nombreUsuario = (char *)calloc(valread, sizeof(char));
+                            
+                            //ahora copio la string recibida
+                            strncpy(nombreUsuario, buffer, valread);
+                            
+                            //lo coloco en el cliente
+                            nc->cliente->nombreUsuario = nombreUsuario;
+                            insertarClienteAlInicio(&clientes, nc);
+                            printf("Inserción de nuevo cliente exitosa\n");
+                        }
+                        else{
+                            //ocurrió un error, libero todo
+                            free(c);
+                            free(nc);
+                            perror("Inserción de nuevo cliente fallida\n");
+                        }
+                        break;
+                    }
+                    default:{
+                        perror("Acción no implementada\n");
+                        break;
+                    }
+                }
+                //printf("%s\n", buffer);
             }
         }
     }
     
-    return (EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
