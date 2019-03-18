@@ -28,14 +28,19 @@
  * 
  */
 int main(int argc, char** argv) {
+    
+    //Primero crea los sitios donde guardará los datos del servidor
     struct ListaClientes clientes = {NULL};
     
+    /*
     insertarAlInicio(&clientes, (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente)));
     
     struct Cliente c = {"Prueba","",0,NULL};
     clientes.primerNodo = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
     clientes.primerNodo->cliente = &c;
     imprimirListaClientes(&clientes);
+    */
+    
     
     /*
      * Primero creo los handles para los sockets que usaré:

@@ -17,10 +17,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-struct NodoCliente;
 struct Cliente;
+struct NodoCliente;
 struct ListaClientes;
 struct Mensaje;
+struct NodoMensaje;
+struct ListaMensajes;
 
 struct Cliente{
     char * nombreUsuario;
@@ -49,5 +51,17 @@ struct Mensaje{
     const char * contenido;
     int estado;
 };
+
+struct NodoMensaje{
+    struct Mensaje * mensaje;
+    struct NodoMensaje * siguiente;
+};
+
+struct ListaMensajes{
+    struct NodoMensaje * primerNodo;
+};
+
+void insertarAlInicio(struct ListaMensajes *, struct NodoMensaje *);
+void imprimirListaMensajes(struct ListaMensajes *);
 
 #endif /* ESTRUCTURAS_H */

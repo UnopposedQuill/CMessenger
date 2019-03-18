@@ -28,3 +28,23 @@ void imprimirListaClientes(struct ListaClientes * self){
     }
     return;
 }
+
+void insertarAlInicio(struct ListaMensajes * self, struct NodoMensaje* nm){
+    nm->siguiente = self->primerNodo;
+    self->primerNodo = nm;
+    return;
+}
+
+void imprimirListaMensajes(struct ListaMensajes * self){
+    struct NodoMensaje * recorreNodos = self->primerNodo;
+    while(recorreNodos != NULL){
+        printf("Remitente: %s\n"
+               "Destinatario: %s\n"
+               "Contenido: %s\n", 
+               recorreNodos->mensaje->remitente,
+               recorreNodos->mensaje->destinatario,
+               recorreNodos->mensaje->contenido);
+        recorreNodos = recorreNodos->siguiente;
+    }
+    return;
+}
