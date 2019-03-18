@@ -28,12 +28,13 @@
  * 
  */
 int main(int argc, char** argv) {
-
     struct ListaClientes clientes = {NULL};
-    char nombre[] = "Prueba";
-    clientes.primerNodo = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
-    clientes.primerNodo->cliente->nombreUsuario = nombre;
+    
     insertarAlInicio(&clientes, (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente)));
+    
+    struct Cliente c = {"Prueba","",0,NULL};
+    clientes.primerNodo = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
+    clientes.primerNodo->cliente = &c;
     imprimirListaClientes(&clientes);
     
     /*
