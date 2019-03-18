@@ -30,6 +30,20 @@ void imprimirListaClientes(struct ListaClientes * self){
     return;
 }
 
+void limpiarClientes(struct ListaClientes* self){
+    struct NodoCliente * recorreNodos = self->primerNodo;
+    self->primerNodo = NULL;
+    while(recorreNodos != NULL){
+        free(recorreNodos->cliente->nombreUsuario);
+        free(recorreNodos->cliente->ipRegistrada);
+        free(recorreNodos->cliente);
+        struct NodoCliente * nodoALiberar = recorreNodos;
+        free(nodoALiberar);
+        recorreNodos = recorreNodos->siguiente;
+    }
+    return;
+}
+
 int cantidadClientes(struct ListaClientes* self){
     struct NodoCliente * recorreNodos = self->primerNodo;
     int resultado = 0;
@@ -77,4 +91,20 @@ int cantidadMensajes(struct ListaMensajes* self){
         resultado;
     }
     return resultado;
+}
+
+void limpiarMensajes(struct ListaMensajes* self){
+    struct NodoMensaje * recorreNodos = self->primerNodo;
+    self->primerNodo = NULL;
+    while(recorreNodos != NULL){
+        free(recorreNodos->mensaje->contenido);
+        free(recorreNodos->mensaje->destinatario);
+        free(recorreNodos->mensaje->remitente);
+        free(recorreNodos->mensaje->estado);
+        free(recorreNodos->mensaje);
+        struct NodoMensaje * nodoALiberar = recorreNodos;
+        free(nodoALiberar);
+        recorreNodos = recorreNodos->siguiente;
+    }
+    return;
 }
