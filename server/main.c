@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "estructuras.h"
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
 #define PORT 15000
@@ -28,6 +29,13 @@
  */
 int main(int argc, char** argv) {
 
+    struct ListaClientes clientes = {NULL};
+    char nombre[] = "Prueba";
+    clientes.primerNodo = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
+    clientes.primerNodo->cliente->nombreUsuario = nombre;
+    insertarAlInicio(&clientes, (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente)));
+    imprimirListaClientes(&clientes);
+    
     /*
      * Primero creo los handles para los sockets que usaré:
      * server_fd: El socket principal del servidor
