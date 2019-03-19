@@ -100,7 +100,6 @@ void limpiarMensajes(struct ListaMensajes* self){
         free(recorreNodos->mensaje->contenido);
         free(recorreNodos->mensaje->destinatario);
         free(recorreNodos->mensaje->remitente);
-        free(recorreNodos->mensaje->estado);
         free(recorreNodos->mensaje);
         struct NodoMensaje * nodoALiberar = recorreNodos;
         free(nodoALiberar);
