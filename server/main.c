@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <arpa/inet.h>
 #include "estructuras.h"
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
@@ -128,18 +129,38 @@ int main(int argc, char** argv) {
                         //Asignar el cliente al nodo...
                         nc->cliente = c;
                         
-                        //Finalmente conseguir el supuesto nombre del usuario
-                        if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
-                            //logró conseguirlo, creo un buffer para el nombre del cliente
-                            char * nombreUsuario = (char *)calloc(valread, sizeof(char));
+                        //ahora agrego la dirección de la cual me escribe el new_socket
+                        //Primero creo un arreglo donde se guardará la información
+                        //Uso sólo Ipv4, así que ocupo 16 caracteres para la ip, y uno para finalizar
+                        c->ipRegistrada = (char *)calloc(17, sizeof(char));
+                        
+                        //En este punto la dirección debería seguir guardada en la información que usé en el accept
+                        //struct sockaddr_in * s = (struct sockaddr_in *) address;
+                        strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
+                        
+                        //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
+                        if((valread = read(new_socket, buffer, sizeof(int))) > 0){
+                            c->puertoRegistrado = atoi(buffer);
                             
-                            //ahora copio la string recibida
-                            strncpy(nombreUsuario, buffer, valread);
-                            
-                            //lo coloco en el cliente
-                            nc->cliente->nombreUsuario = nombreUsuario;
-                            insertarClienteAlInicio(&clientes, nc);
-                            printf("Inserción de nuevo cliente exitosa\n");
+                            //Finalmente conseguir el supuesto nombre del usuario
+                            if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
+                                //logró conseguirlo, creo un buffer para el nombre del cliente
+                                char * nombreUsuario = (char *)calloc(valread, sizeof(char));
+
+                                //ahora copio la string recibida
+                                strncpy(nombreUsuario, buffer, valread);
+
+                                //lo coloco en el cliente
+                                nc->cliente->nombreUsuario = nombreUsuario;
+                                insertarClienteAlInicio(&clientes, nc);
+                                printf("Inserción de nuevo cliente exitosa\n");
+                            }
+                            else{
+                                //ocurrió un error, libero todo
+                                free(c);
+                                free(nc);
+                                perror("Inserción de nuevo cliente fallida\n");
+                            }
                         }
                         else{
                             //ocurrió un error, libero todo
@@ -150,7 +171,7 @@ int main(int argc, char** argv) {
                         break;
                     }
                     default:{
-                        perror("Acción no implementada\n");
+                        perror("Acción no implementada");
                         break;
                     }
                     

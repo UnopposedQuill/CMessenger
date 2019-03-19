@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         int socket_handler = 0, valread;
         
         //Los datos que se le enviarán al servidor
-        char data[] = "0Prueba";
+        char data[1024] = "0Prueba";
         
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -86,12 +86,19 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         
-        //Ahora intento escribirle
-        if((valread = send(socket_handler, data, strlen(data), 0)) < 0){
+        //Ahora la segunda parte del mensaje, para esto me aseguro de que el buffer esté limpio
+        memset(data, 0, BUFFER_SIZE);
+        //Luego le agrego la siguiente información, son dos bytes que le dicen al servidor en qué puerto está escuchando el cliente
+        snprintf(data, 8 + sizeof(int),"0%dPrueba", PORT);
+        
+        //Ahora intento escribirle la segunda parte de los datos
+        if((valread = send(socket_handler, data, 10, 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
+        
         printf("Data sent successfully, total bytes sent: %d\n", valread);
+        
         //La dirección fue traducida correctamente
         return EXIT_SUCCESS;
     }
