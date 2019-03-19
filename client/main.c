@@ -4,20 +4,21 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   main.c
  * Author: esteban
  *
  * Created on 6 de marzo de 2019, 08:44 PM
  */
 
-#include <stdio.h> 
-#include <sys/socket.h> 
-#include <stdlib.h> 
-#include <netinet/in.h> 
+#include <stdio.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "estructuras.h"
 
 //Me interesa definir este puerto aquí
 #define PORT 15000
@@ -28,7 +29,7 @@
 //Finalmente la dirección en la que supuestamente está el servidor
 #define SERVER_ADDRESS "127.0.0.1"
 /*
- * 
+ *
  */
 int main(int argc, char** argv) {
 
@@ -46,46 +47,46 @@ int main(int argc, char** argv) {
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
     else{
         //Usaré esto para probar el sistema de envío de mensajes
-        
+
         //La dirección del socket que va a leer
         struct sockaddr_in address;
-        
+
         //La dirección del socket del servidor
         struct sockaddr_in serv_addr;
-        
+
         //El manejador del socket, y una variable que guardará la cantidad de bytes que de verdad se leen
         int socket_handler = 0, valread;
-        
+
         //Los datos que se le enviarán al servidor
         char data[] = "Prueba 1";
-        
+
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
             return EXIT_FAILURE;
         }
-        //Memset se encarga de asignar un valor a la memoria, en este caso, la 
+        //Memset se encarga de asignar un valor a la memoria, en este caso, la
         //idea es limpiar los valores de <serv_addr> que no necesito
         memset(&serv_addr, '0', sizeof(serv_addr));
-        
+
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
         //Ahora el puerto: PORT
         serv_addr.sin_port = htons(PORT);
-        
+
         //Ahora necesito convertir las direcciones a su forma binaria:
         if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
             perror("Address invalid or not supported");
             return EXIT_FAILURE;
         }
-        
+
         //Ahora intento conectar con el servidor
         if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
             perror("Couldn't connect to server");
             return EXIT_FAILURE;
         }
-        
+
         //Ahora intento escribirle
         if((valread = send(socket_handler, data, strlen(data), 0)) < 0){
             perror("Couldn't write data to server");
@@ -96,4 +97,3 @@ int main(int argc, char** argv) {
         return EXIT_SUCCESS;
     }
 }
-
