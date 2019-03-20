@@ -22,7 +22,12 @@
 #include <string.h>
 #include <signal.h>
 #include <arpa/inet.h>
+
+//Las estructuras del servidor
 #include "estructuras.h"
+
+//Algunas utilidades necesarias para enviar números serializados
+#include "utils.h"
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
 #define PORT 15000
@@ -94,8 +99,14 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     printf("Initialization Success, listening on port %d\n", PORT);
+    
+    //Este buscador lo uso para buscar cadenas dentro de BUFFER, sin tener que moverlo
+    char * buscador;
+    
+    //Estos dos son para las operaciones del servidor dentro de la base de datos
     struct Cliente * c;
     struct NodoCliente * nc;
+    
     //Mientras deba seguir corriendo:
     while(keepRunning){
         //Intento aceptar una nueva conexión
@@ -130,37 +141,24 @@ int main(int argc, char** argv) {
                         strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
                         
                         //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
-                        if((valread = read(new_socket, buffer, sizeof(int))) > 0){
+                        if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
                             c->puertoRegistrado = atoi(buffer);
+                            //ahora tengo que buscar el supuesto nombre del usuario, este while me deja buscador justo
+                            //donde termina el número del puerto
+                            while(*(buscador++));
+                            strncpy(nc->cliente->nombreUsuario, buscador, valread - strlen(buffer) - 1);
                             
-                            //Finalmente conseguir el supuesto nombre del usuario
-                            if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
-                                //logró conseguirlo, creo un buffer para el nombre del cliente
-                                char * nombreUsuario = (char *)calloc(valread, sizeof(char));
+                            insertarClienteAlInicio(&clientes, nc);
+                            printf("Successful client insertion\n");
 
-                                //ahora copio la string recibida
-                                strncpy(nombreUsuario, buffer, valread);
-
-                                //lo coloco en el cliente
-                                nc->cliente->nombreUsuario = nombreUsuario;
-                                insertarClienteAlInicio(&clientes, nc);
-                                printf("Successful client insertion\n");
-                                
-                                //Ahora me falta notificar al cliente que su inserción fue exitosa
-                                //Como no tiene datos que enviar, sólo le envío un caracter
-                                snprintf(buffer, 1, "1");
-                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                    perror("Error while notifying success to client upon insertion");
-                                }
-                                else{
-                                    printf("Client insertion operation behaved normally\n");
-                                }
+                            //Ahora me falta notificar al cliente que su inserción fue exitosa
+                            //Como no tiene datos que enviar, sólo le envío un caracter
+                            snprintf(buffer, 1, "1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying success to client upon insertion");
                             }
                             else{
-                                //ocurrió un error, libero todo
-                                free(c);
-                                free(nc);
-                                perror("Failed client insertion\n");
+                                printf("Client insertion operation behaved normally\n");
                             }
                         }
                         else{
@@ -286,10 +284,9 @@ int main(int argc, char** argv) {
                         }
                     }
                     default:{
-                        perror("Action not implemented yet");
+                        printf("Action not implemented yet");
                         break;
                     }
-                    
                 }
                 //printf("%s\n", buffer);
                 

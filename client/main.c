@@ -19,9 +19,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include "estructuras.h"
+#include "utils.h"
 
 //Me interesa definir este puerto aquí
-#define PORT 15000
+#define SERVER_PORT 15000
+#define CLIENT_PORT 15001
 
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
@@ -60,6 +62,9 @@ int main(int argc, char** argv) {
         //El buffer que contendrá los datos que se le enviarán al servidor
         char data[1024];
         
+        //El nombre del usuario para las pruebas
+        char nombreUsuario[] = "Prueba";
+        
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
@@ -72,8 +77,8 @@ int main(int argc, char** argv) {
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: PORT
-        serv_addr.sin_port = htons(PORT);
+        //Ahora el puerto: SERVER_PORT
+        serv_addr.sin_port = htons(SERVER_PORT);
 
         //Ahora necesito convertir las direcciones a su forma binaria:
         if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
@@ -90,20 +95,56 @@ int main(int argc, char** argv) {
         //Ahora la segunda parte del mensaje, para esto me aseguro de que el buffer esté limpio
         memset(data, 0, BUFFER_SIZE);
         //Luego le agrego la siguiente información, son dos bytes que le dicen al servidor en qué puerto está escuchando el cliente
-        snprintf(data, 8 + sizeof(int),"0%dPrueba", PORT);
+        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario),"0%d\0%s", CLIENT_PORT, nombreUsuario);
         
         //Ahora intento escribirle la segunda parte de los datos
-        if((valread = send(socket_handler, data, 8 + sizeof(int), 0)) < 0){
+        if((valread = send(socket_handler, data, 9 + sizeof(int), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
         
         printf("Data sent successfully, total bytes sent: %d\n", valread);
         
+        //Ahora deseo recibir la confirmación del servidor
+        if((valread = recv(socket_handler, data, 1, 0)) < 0){
+            perror("Couldn't response data from server");
+            return EXIT_FAILURE;
+        }
+        
+        if(data[0] == '1'){
+            printf("Correct insertion of new user");
+        }
+        else{
+            printf("Failure upon insertion of new user");
+        }
+        
         close(socket_handler);
         //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
         
         //Tengo que reconectarme puesto que estas conexiones se crean por cada solicitud
+        
+        //Para esto tengo que crear un nuevo socket como si fuera otro programa por completo
+        //Ahora intentaré hacer el socket nuevo
+        if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+            perror("Socket creation error");
+            return EXIT_FAILURE;
+        }
+        //Memset se encarga de asignar un valor a la memoria, en este caso, la
+        //idea es limpiar los valores de <serv_addr> que no necesito
+        memset(&serv_addr, '0', sizeof(serv_addr));
+
+        //Ahora coloco los valores que sí necesito
+        //Primero el protocolo: Ipv4
+        serv_addr.sin_family = AF_INET;
+        //Ahora el puerto: SERVER_PORT
+        serv_addr.sin_port = htons(SERVER_PORT);
+
+        //Ahora necesito convertir las direcciones a su forma binaria:
+        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+            perror("Address invalid or not supported");
+            return EXIT_FAILURE;
+        }
+        
         if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
             perror("Couldn't connect to server");
             return EXIT_FAILURE;
@@ -111,9 +152,9 @@ int main(int argc, char** argv) {
         
         //Para esto reinicio a 0 todo el buffer
         memset(data, 0, BUFFER_SIZE);
-        snprintf(data, BUFFER_SIZE, "1Prueba\0Prueba\0");
+        snprintf(data, BUFFER_SIZE, "1%s%s", nombreUsuario, nombreUsuario);
         
-        if((valread = send(socket_handler, data, 15, 0)) < 0){
+        if((valread = send(socket_handler, data, 1 + 2*(strlen(nombreUsuario)+1), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
