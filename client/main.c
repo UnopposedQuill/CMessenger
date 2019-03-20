@@ -57,8 +57,8 @@ int main(int argc, char** argv) {
         //El manejador del socket, y una variable que guardará la cantidad de bytes que de verdad se leen
         int socket_handler = 0, valread;
 
-        //Los datos que se le enviarán al servidor
-        char data[1024] = "0Prueba";
+        //El buffer que contendrá los datos que se le enviarán al servidor
+        char data[1024];
         
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -100,7 +100,26 @@ int main(int argc, char** argv) {
         
         printf("Data sent successfully, total bytes sent: %d\n", valread);
         
-        //La dirección fue traducida correctamente
+        close(socket_handler);
+        //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
+        
+        //Tengo que reconectarme puesto que estas conexiones se crean por cada solicitud
+        if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+            perror("Couldn't connect to server");
+            return EXIT_FAILURE;
+        }
+        
+        //Para esto reinicio a 0 todo el buffer
+        memset(data, 0, BUFFER_SIZE);
+        snprintf(data, BUFFER_SIZE, "1Prueba\0Prueba\0");
+        
+        if((valread = send(socket_handler, data, 15, 0)) < 0){
+            perror("Couldn't write data to server");
+            return EXIT_FAILURE;
+        }
+        
+        printf("Data sent successfully, total bytes sent: %d\n", valread);
+        
         return EXIT_SUCCESS;
     }
 }

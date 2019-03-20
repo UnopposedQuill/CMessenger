@@ -34,10 +34,19 @@ void limpiarClientes(struct ListaClientes* self){
     struct NodoCliente * recorreNodos = self->primerNodo;
     self->primerNodo = NULL;
     while(recorreNodos != NULL){
+        
+        //Primero tengo que liberar los contactos
+        struct NodoCliente * recorreContactos = recorreNodos->cliente->contactos->primerNodo;
+        struct NodoCliente * nodoALiberar;
+        while(recorreContactos != NULL){
+            nodoALiberar = recorreContactos;
+            recorreContactos = recorreContactos->siguiente;
+            free(nodoALiberar);
+        }
         free(recorreNodos->cliente->nombreUsuario);
         free(recorreNodos->cliente->ipRegistrada);
         free(recorreNodos->cliente);
-        struct NodoCliente * nodoALiberar = recorreNodos;
+        nodoALiberar = recorreNodos;
         free(nodoALiberar);
         recorreNodos = recorreNodos->siguiente;
     }
@@ -61,6 +70,16 @@ int existeCliente(struct ListaClientes * self, const char * nombreUsuario){
         }
     }
     return 0;
+}
+
+struct Cliente * buscar(struct ListaClientes * self, const char * nombreUsuario){
+    struct NodoCliente * recorreNodos = self->primerNodo;
+    while(recorreNodos != NULL){
+        if(strcmp(recorreNodos->cliente->nombreUsuario, nombreUsuario) == 0){
+            return recorreNodos->cliente;
+        }
+    }
+    return NULL;
 }
 
 //Funciones Lista Mensajes

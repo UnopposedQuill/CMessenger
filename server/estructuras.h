@@ -38,14 +38,12 @@ struct NodoCliente{
 
 struct ListaClientes{
     struct NodoCliente * primerNodo;
-    
-    //void (*insertarAlInicio)(struct ListaClientes *, struct NodoCliente *);
 };
 
 struct Mensaje{
-    const char * remitente;
-    const char * destinatario;
-    const char * contenido;
+    char * remitente;
+    char * destinatario;
+    char * contenido;
     int estado;
 };
 
@@ -64,6 +62,7 @@ void imprimirListaClientes(struct ListaClientes *);
 void limpiarClientes(struct ListaClientes *);
 int cantidadClientes(struct ListaClientes *);
 int existeCliente(struct ListaClientes *, const char *);
+struct Cliente * buscar(struct ListaClientes *, const char *);
 
 //Funciones de Manipulación de Listas de Mensajes
 void insertarMensajeAlInicio(struct ListaMensajes *, struct NodoMensaje *);

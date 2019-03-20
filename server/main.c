@@ -55,16 +55,6 @@ int main(int argc, char** argv) {
     sigaction(SIGINT, &act, NULL);
     
     /*
-    insertarAlInicio(&clientes, (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente)));
-    
-    struct Cliente c = {"Prueba","",0,NULL};
-    clientes.primerNodo = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
-    clientes.primerNodo->cliente = &c;
-    imprimirListaClientes(&clientes);
-    */
-    
-    
-    /*
      * Primero creo los handles para los sockets que usaré:
      * server_fd: El socket principal del servidor
      * new_socket: El socket que intenta comunicarse con el servidor
@@ -167,6 +157,27 @@ int main(int argc, char** argv) {
                             free(c);
                             free(nc);
                             perror("Inserción de nuevo cliente fallida\n");
+                        }
+                        break;
+                    }
+                    case 1:{
+                        //tengo que registrar un nuevo contacto a un cliente ya existente
+                        //Primero creo una variable que se encargará de guardar el nombre del supuesto contacto
+                        //La cual supuestamente está luego de la string del nombre del cliente
+                        char * nombreContacto = buffer;
+                        
+                        //Este while me deja la variable justo después del caracter nulo
+                        while(*(nombreContacto++));
+                        
+                        //Si ambos usuarios existen: Nótese que se puede agregar a sí mismo como contacto
+                        if(existeCliente(&clientes,buffer) && existeCliente(&clientes, nombreContacto)){
+                            //Entonces agrego el segundo como contacto del primero
+                            //Ya en este punto puedo asegurar que buscar no retornará NULL
+                            
+                            //Creo un nuevo nodo para el contacto
+                            struct NodoCliente * nodoContacto = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
+                            nodoContacto->cliente = buscar(&clientes, nombreContacto);
+                            insertarClienteAlInicio(buscar(&clientes, buffer)->contactos, nodoContacto);
                         }
                         break;
                     }
