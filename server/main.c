@@ -94,6 +94,8 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     printf("Initialization Success, listening on port %d\n", PORT);
+    struct Cliente * c;
+    struct NodoCliente * nc;
     //Mientras deba seguir corriendo:
     while(keepRunning){
         //Intento aceptar una nueva conexión
@@ -114,8 +116,8 @@ int main(int argc, char** argv) {
                 switch(directiva){
                     case 0:{
                         //tengo que registrar un nuevo usuario, primero creo las variables que guardarán su información
-                        struct Cliente * c = (struct Cliente *)calloc(1, sizeof(struct Cliente));
-                        struct NodoCliente * nc = (struct NodoCliente *)calloc(1, sizeof(struct NodoCliente));
+                        c = (struct Cliente *)calloc(1, sizeof(struct Cliente));
+                        nc = (struct NodoCliente *)calloc(1, sizeof(struct NodoCliente));
                         //Asignar el cliente al nodo...
                         nc->cliente = c;
                         
@@ -125,7 +127,6 @@ int main(int argc, char** argv) {
                         c->ipRegistrada = (char *)calloc(17, sizeof(char));
                         
                         //En este punto la dirección debería seguir guardada en la información que usé en el accept
-                        //struct sockaddr_in * s = (struct sockaddr_in *) address;
                         strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
                         
                         //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
@@ -143,20 +144,30 @@ int main(int argc, char** argv) {
                                 //lo coloco en el cliente
                                 nc->cliente->nombreUsuario = nombreUsuario;
                                 insertarClienteAlInicio(&clientes, nc);
-                                printf("Inserción de nuevo cliente exitosa\n");
+                                printf("Successful client insertion\n");
+                                
+                                //Ahora me falta notificar al cliente que su inserción fue exitosa
+                                //Como no tiene datos que enviar, sólo le envío un caracter
+                                snprintf(buffer, 1, "1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying success to client upon insertion");
+                                }
+                                else{
+                                    printf("Client insertion operation behaved normally\n");
+                                }
                             }
                             else{
                                 //ocurrió un error, libero todo
                                 free(c);
                                 free(nc);
-                                perror("Inserción de nuevo cliente fallida\n");
+                                perror("Failed client insertion\n");
                             }
                         }
                         else{
                             //ocurrió un error, libero todo
                             free(c);
                             free(nc);
-                            perror("Inserción de nuevo cliente fallida\n");
+                            perror("Failed client insertion\n");
                         }
                         break;
                     }
@@ -178,11 +189,104 @@ int main(int argc, char** argv) {
                             struct NodoCliente * nodoContacto = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
                             nodoContacto->cliente = buscar(&clientes, nombreContacto);
                             insertarClienteAlInicio(buscar(&clientes, buffer)->contactos, nodoContacto);
+                            
+                            //Ahora le notifico que pude realizarlo
+                            snprintf(buffer, 1, "1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying success to client upon insertion");
+                            }
+                            else{
+                                printf("Client insertion operation behaved normally\n");
+                            }
+                        }
+                        else{
+                            //Le notifico que hubo un error
+                            snprintf(buffer, 1, "-1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying failure to client upon insertion");
+                            }
+                            else{
+                                printf("Client insertion failure informed\n");
+                            }
                         }
                         break;
                     }
+                    case 2:{
+                        //inicio de sesión
+                        if(existeCliente(&clientes, buffer)){
+                            //Sí existe el usuario, así que lo busco
+                            c = buscar(&clientes, buffer);
+                            //En este punto la dirección debería seguir guardada en la información que usé en el accept
+                            strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
+                        
+                            //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
+                            if((valread = read(new_socket, buffer, sizeof(int))) > 0){
+                                c->puertoRegistrado = atoi(buffer);
+                            }
+
+                            printf("Successful client login\n");
+
+                            //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
+                            //Como no tiene datos que enviar, sólo le envío un caracter
+                            snprintf(buffer, 1, "1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying success to client upon login");
+                            }
+                            else{
+                                printf("Client login operation behaved normally\n");
+                            }
+                        }
+                        else{
+                            printf("Login with an unexisting user\n");
+                            //Le notifico que hubo un error
+                            snprintf(buffer, 1, "-1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying failure to client upon login");
+                            }
+                            else{
+                                printf("Client login failure informed\n");
+                            }
+                        }
+                    }
+                    case 3:{
+                        //cierre de sesión
+                        if(existeCliente(&clientes, buffer)){
+                            //Sí existe el usuario, así que lo busco
+                            c = buscar(&clientes, buffer);
+                            //En este punto la dirección debería seguir guardada en la información que usé en el accept
+                            strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
+                        
+                            //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
+                            if((valread = read(new_socket, buffer, sizeof(int))) > 0){
+                                c->puertoRegistrado = atoi(buffer);
+                            }
+
+                            printf("Successful client login\n");
+
+                            //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
+                            //Como no tiene datos que enviar, sólo le envío un caracter
+                            snprintf(buffer, 1, "1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying success to client upon login");
+                            }
+                            else{
+                                printf("Client login operation behaved normally\n");
+                            }
+                        }
+                        else{
+                            printf("Login with an unexisting user\n");
+                            //Le notifico que hubo un error
+                            snprintf(buffer, 1, "-1");
+                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                perror("Error while notifying failure to client upon login");
+                            }
+                            else{
+                                printf("Client login failure informed\n");
+                            }
+                        }
+                    }
                     default:{
-                        perror("Acción no implementada");
+                        perror("Action not implemented yet");
                         break;
                     }
                     
@@ -194,7 +298,7 @@ int main(int argc, char** argv) {
             }
         }
     }
-    printf("Limpiando Variables...\n");
+    printf("Wiping data...\n");
     //Cierro el socket del servidor
     close(server_fd);
     //Por el momento aquí sólo se liberará la memoria del programa, pero eventualmente se desea
@@ -203,7 +307,7 @@ int main(int argc, char** argv) {
     limpiarMensajes(&mensajes);
     
     //Finalizo todo
-    printf("Finalizando Servidor...\n");
+    printf("Shutting down server...\n");
     
     return EXIT_SUCCESS;
 }
