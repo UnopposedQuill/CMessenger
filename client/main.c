@@ -21,20 +21,57 @@
 #include "estructuras.h"
 #include "utils.h"
 
-//Me interesa definir este puerto aquí
+//Me interesa definir estos puertos aquí, eventualmente se cambiarán por la lectura del archivo
 #define SERVER_PORT 15000
 #define CLIENT_PORT 15001
 
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
 
-//Finalmente la dirección en la que supuestamente está el servidor
+//Finalmente la dirección en la que supuestamente está el servidor, también se cambiará desde el .ini
 #define SERVER_ADDRESS "127.0.0.1"
+
+//Esto es para el pipe que es necesario para comunicar ambos procesos
+#define LEER 0
+#define ESCRIBIR 1
 /*
  *
  */
 int main(int argc, char** argv) {
 
+    //Dos descriptores que se usarán para la tubería entre ambos procesos del fork
+    int descriptor[2];
+    char bufferTuberia[BUFFER_SIZE];
+    
+    //Creo la tubería
+    pipe(descriptor);
+    
+    printf("Bienvenido al cliente de CMessenger.\n\n1. Registrarse\n2. Iniciar Sesión\n");
+    int opcion;
+    int datosMenu = scanf("%d", &opcion);
+    if(datosMenu <= 0){
+        perror("Invalid Selection");
+        return EXIT_FAILURE;
+    }
+    
+    printf("Ingrese su nombre de usuario (Máximo 20 caracteres): ");
+    char nombreUsuario[21];
+    
+    datosMenu = scanf("%20s", nombreUsuario);
+    if(datosMenu <= 0){
+        perror("Invalid input");
+        return EXIT_FAILURE;
+    }
+    
+    if(opcion == 1){
+        printf("Registrar\n");
+    }else if(opcion == 2){
+        printf("Inicio de Sesión\n");
+    }else{
+        printf("Invalid Selection\n");
+        return EXIT_FAILURE;
+    }
+    
     //Realizo un fork, y guardo el retorno en pid
     int pid = fork();
     //Si es menor a cero, no pudo realizarlo, error
