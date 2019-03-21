@@ -16,5 +16,6 @@
 
 int cantidadDigitos(int numero);
 char * strncat2(char *,const char *, int);
+char * strlen2(const char *);
 
 #endif /* UTILS_H */

@@ -117,8 +117,6 @@ int main(int argc, char** argv) {
     struct Mensaje * m;
     struct NodoMensaje * nm;
     
-    
-    
     //Mientras deba seguir corriendo:
     while(keepRunning){
         //Intento aceptar una nueva conexión
@@ -246,9 +244,19 @@ int main(int argc, char** argv) {
                                 printf("Successful client login\n");
                                 //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
                                 
-                                //Como no tiene datos que enviar, sólo le envío un caracter
-                                snprintf(buffer, 1, "1");
-                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                //Ahora tengo que enviar todos los datos de los contactos que tiene el usuario
+                                strncpy(buffer, "1",1);
+                                
+                                //Voy a usar nc para recorrer toda la lista de contactos del cliente
+                                nc = c->contactos->primerNodo;
+                                buscador = buffer;
+                                while(nc != NULL){
+                                    strncat2(buscador, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
+                                    nc = nc->siguiente;
+                                    while(*(buscador++));
+                                }
+                                
+                                if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
                                     perror("Error while notifying success to client upon login");
                                 }
                                 else{
