@@ -256,13 +256,6 @@ int main(int argc, char** argv) {
                                     while(*(buscador++));
                                 }
                                 
-                                nm = mensajes.primerNodo;
-                                while(nm != NULL){
-                                    strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->cliente->nombreUsuario));
-                                    nm = nm->siguiente;
-                                    while(*(buscador++));
-                                }
-                                
                                 if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
                                     perror("Error while sending contacts during login");
                                 }
