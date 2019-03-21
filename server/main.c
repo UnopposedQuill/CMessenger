@@ -256,11 +256,34 @@ int main(int argc, char** argv) {
                                     while(*(buscador++));
                                 }
                                 
+                                nm = mensajes.primerNodo;
+                                while(nm != NULL){
+                                    strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->cliente->nombreUsuario));
+                                    nm = nm->siguiente;
+                                    while(*(buscador++));
+                                }
+                                
                                 if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
-                                    perror("Error while notifying success to client upon login");
+                                    perror("Error while sending contacts during login");
                                 }
                                 else{
                                     printf("Client login operation behaved normally\n");
+                                    memset(buffer, 0, BUFFER_SIZE);
+                                    nm = mensajes.primerNodo;
+                                    while(nm != NULL){
+                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->remitente));
+                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->contenido));
+                                        //Me aseguro de que todos los mensajes los marque como enviados
+                                        nm->mensaje->estado = 1;
+                                        nm = nm->siguiente;
+                                        while(*(buscador++));
+                                    }
+                                    if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
+                                        perror("Error while sending messages to client upon login");
+                                    }
+                                    else{
+                                        printf("Client login operation behaved normally\n");
+                                    }
                                 }
                             }
                             else{
@@ -437,6 +460,8 @@ int main(int argc, char** argv) {
                         printf("Action not implemented yet");
                         break;
                     }
+                    //Me interesa borrar todo del buffer
+                    memset(buffer, 0, BUFFER_SIZE);
                 }
                 //printf("%s\n", buffer);
                 
