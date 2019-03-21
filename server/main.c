@@ -145,7 +145,11 @@ int main(int argc, char** argv) {
                             c->puertoRegistrado = atoi(buffer);
                             //ahora tengo que buscar el supuesto nombre del usuario, este while me deja buscador justo
                             //donde termina el número del puerto
+                            buscador = buffer;
                             while(*(buscador++));
+                            
+                            c->nombreUsuario = (char *) calloc(1, valread - strlen(buffer) - 1);
+                            c->contactos = (struct ListaClientes *) calloc(1, sizeof(struct ListaClientes));
                             strncpy(nc->cliente->nombreUsuario, buscador, valread - strlen(buffer) - 1);
                             
                             insertarClienteAlInicio(&clientes, nc);
@@ -153,7 +157,8 @@ int main(int argc, char** argv) {
 
                             //Ahora me falta notificar al cliente que su inserción fue exitosa
                             //Como no tiene datos que enviar, sólo le envío un caracter
-                            snprintf(buffer, 1, "1");
+                            strncpy(buffer, "1", 1);
+                            
                             if((valread = send(new_socket, buffer, 1, 0)) < 0){
                                 perror("Error while notifying success to client upon insertion");
                             }
@@ -167,45 +172,51 @@ int main(int argc, char** argv) {
                             free(nc);
                             perror("Failed client insertion\n");
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
                         break;
                     }
                     case 1:{
                         //tengo que registrar un nuevo contacto a un cliente ya existente
                         //Primero creo una variable que se encargará de guardar el nombre del supuesto contacto
                         //La cual supuestamente está luego de la string del nombre del cliente
-                        char * nombreContacto = buffer;
-                        
-                        //Este while me deja la variable justo después del caracter nulo
-                        while(*(nombreContacto++));
-                        
-                        //Si ambos usuarios existen: Nótese que se puede agregar a sí mismo como contacto
-                        if(existeCliente(&clientes,buffer) && existeCliente(&clientes, nombreContacto)){
-                            //Entonces agrego el segundo como contacto del primero
-                            //Ya en este punto puedo asegurar que buscar no retornará NULL
-                            
-                            //Creo un nuevo nodo para el contacto
-                            struct NodoCliente * nodoContacto = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
-                            nodoContacto->cliente = buscar(&clientes, nombreContacto);
-                            insertarClienteAlInicio(buscar(&clientes, buffer)->contactos, nodoContacto);
-                            
-                            //Ahora le notifico que pude realizarlo
-                            snprintf(buffer, 1, "1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying success to client upon insertion");
+                        if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
+                            char * nombreContacto = buffer + 1;
+
+                            //Este while me deja la variable justo después del caracter nulo
+                            while(*(nombreContacto++));
+
+                            //Si ambos usuarios existen: Nótese que se puede agregar a sí mismo como contacto
+                            if(existeCliente(&clientes,buffer) && existeCliente(&clientes, nombreContacto)){
+                                //Entonces agrego el segundo como contacto del primero
+                                //Ya en este punto puedo asegurar que buscar no retornará NULL
+
+                                //Creo un nuevo nodo para el contacto
+                                struct NodoCliente * nodoContacto = (struct NodoCliente *) calloc(1, sizeof(struct NodoCliente));
+                                nodoContacto->cliente = buscar(&clientes, nombreContacto);
+                                insertarClienteAlInicio(buscar(&clientes, buffer)->contactos, nodoContacto);
+
+                                //Ahora le notifico que pude realizarlo
+                                snprintf(buffer, 1, "1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying success to client upon insertion");
+                                }
+                                else{
+                                    printf("Contact insertion operation behaved normally\n");
+                                }
                             }
                             else{
-                                printf("Client insertion operation behaved normally\n");
+                                //Le notifico que hubo un error
+                                snprintf(buffer, 1, "-1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying failure to client upon insertion");
+                                }
+                                else{
+                                    printf("Client insertion failure informed\n");
+                                }
                             }
                         }
                         else{
-                            //Le notifico que hubo un error
-                            snprintf(buffer, 1, "-1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying failure to client upon insertion");
-                            }
-                            else{
-                                printf("Client insertion failure informed\n");
-                            }
+                            perror("Error while reading new extra data upon contact insertion");
                         }
                         break;
                     }
@@ -220,18 +231,21 @@ int main(int argc, char** argv) {
                             //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
                             if((valread = read(new_socket, buffer, sizeof(int))) > 0){
                                 c->puertoRegistrado = atoi(buffer);
-                            }
-
-                            printf("Successful client login\n");
-
-                            //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
-                            //Como no tiene datos que enviar, sólo le envío un caracter
-                            snprintf(buffer, 1, "1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying success to client upon login");
+                                printf("Successful client login\n");
+                                //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
+                                
+                                //Como no tiene datos que enviar, sólo le envío un caracter
+                                snprintf(buffer, 1, "1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying success to client upon login");
+                                }
+                                else{
+                                    printf("Client login operation behaved normally\n");
+                                }
                             }
                             else{
-                                printf("Client login operation behaved normally\n");
+                                //Ocurrió un error durante la lectura de datos
+                                perror("Error upon reading username that's logging in");
                             }
                         }
                         else{
@@ -251,15 +265,10 @@ int main(int argc, char** argv) {
                         if(existeCliente(&clientes, buffer)){
                             //Sí existe el usuario, así que lo busco
                             c = buscar(&clientes, buffer);
-                            //En este punto la dirección debería seguir guardada en la información que usé en el accept
-                            strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
-                        
-                            //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
-                            if((valread = read(new_socket, buffer, sizeof(int))) > 0){
-                                c->puertoRegistrado = atoi(buffer);
-                            }
-
-                            printf("Successful client login\n");
+                            
+                            free(c->ipRegistrada);
+                            c->ipRegistrada = NULL;
+                            c->puertoRegistrado = -1;
 
                             //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
                             //Como no tiene datos que enviar, sólo le envío un caracter
@@ -282,6 +291,11 @@ int main(int argc, char** argv) {
                                 printf("Client login failure informed\n");
                             }
                         }
+                    }
+                    case 4:{
+                        //enviar un mensaje, sólo se permite enviar mensajes a elementos dentro de la
+                        //lista de contactos
+                        
                     }
                     default:{
                         printf("Action not implemented yet");

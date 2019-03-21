@@ -95,8 +95,9 @@ int main(int argc, char** argv) {
         //Ahora la segunda parte del mensaje, para esto me aseguro de que el buffer esté limpio
         memset(data, 0, BUFFER_SIZE);
         //Luego le agrego la siguiente información, son dos bytes que le dicen al servidor en qué puerto está escuchando el cliente
-        int variable = snprintf(data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario),"0%d\0%s", CLIENT_PORT, nombreUsuario);
-        printf("%d\t%d\n", 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario), variable);
+        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "0%d\0", CLIENT_PORT);
+        strncat2(data, nombreUsuario, strlen(nombreUsuario));
+        
         //Ahora intento escribirle la segunda parte de los datos
         if((valread = send(socket_handler, data, 9 + sizeof(int), 0)) < 0){
             perror("Couldn't write data to server");
@@ -152,7 +153,8 @@ int main(int argc, char** argv) {
         
         //Para esto reinicio a 0 todo el buffer
         memset(data, 0, BUFFER_SIZE);
-        snprintf(data, BUFFER_SIZE, "1%s%s", nombreUsuario, nombreUsuario);
+        snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
+        strncat2(data, nombreUsuario, strlen(nombreUsuario));
         
         if((valread = send(socket_handler, data, 1 + 2*(strlen(nombreUsuario)+1), 0)) < 0){
             perror("Couldn't write data to server");

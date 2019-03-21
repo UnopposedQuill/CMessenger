@@ -15,5 +15,6 @@
 #define UTILS_H
 
 int cantidadDigitos(int numero);
+char * strncat2(char *,const char *, int);
 
 #endif /* UTILS_H */

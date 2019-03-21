@@ -68,6 +68,7 @@ int existeCliente(struct ListaClientes * self, const char * nombreUsuario){
         if(strcmp(recorreNodos->cliente->nombreUsuario, nombreUsuario) == 0){
             return 1;
         }
+        recorreNodos = recorreNodos->siguiente;
     }
     return 0;
 }
