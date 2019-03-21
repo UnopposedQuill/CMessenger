@@ -107,6 +107,18 @@ int main(int argc, char** argv) {
     struct Cliente * c;
     struct NodoCliente * nc;
     
+    //Para almacenar nombres de destinatarios de mensaje
+    char * nombreDestinatario;
+    
+    //Para almacenar contenidos de mensaje
+    char * contenido;
+    
+    //Para almacenar los mensajes
+    struct Mensaje * m;
+    struct NodoMensaje * nm;
+    
+    
+    
     //Mientras deba seguir corriendo:
     while(keepRunning){
         //Intento aceptar una nueva conexión
@@ -295,7 +307,123 @@ int main(int argc, char** argv) {
                     case 4:{
                         //enviar un mensaje, sólo se permite enviar mensajes a elementos dentro de la
                         //lista de contactos
-                        
+                        //inicio de sesión
+                        if(existeCliente(&clientes, buffer + 1)){
+                            //Sí existe el usuario, así que lo busco
+                            c = buscar(&clientes, buffer);
+                            
+                            //Esto almacenará el destinatario
+                            nombreDestinatario = buffer;
+                            while(*(nombreDestinatario++));
+                            
+                            //Esto almacenará el contenido
+                            contenido = nombreDestinatario;
+                            while(*(contenido++));
+                            
+                            //Si existe dentro de los contactos
+                            if(existeCliente(&c->contactos, nombreDestinatario)){
+                                //Existe, procedo a almacenarlo, y luego ver si puedo enviarlo
+                                //Primero el paquete
+                                nm = (NodoMensaje *) calloc(1, sizeof(NodoMensaje));
+                                
+                                //Luego el mensaje
+                                m = (Mensaje *) calloc(1, sizeof(Mensaje));
+                                m->remitente = (char *) calloc(strlen(buffer), sizeof(char));
+                                m->destinatario = (char *) calloc(strlen(nombreDestinatario), sizeof(char));
+                                m->contenido = (char *) calloc(strlen(contenido), sizeof(char));
+                                
+                                //Coloco el mensaje en el paquete
+                                nm->mensaje = m;
+                                
+                                //Coloco el paquete en la base
+                                insertarMensajeAlInicio(mensajes, nm);
+                                printf("Message insertion successfull\n");
+                                
+                                //Ahora a notificar el envío del mensaje
+                                strncpy(buffer, "1", 2);
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying failure to client upon login");
+                                }
+                                else{
+                                    printf("Client login failure informed\n");
+                                }
+                                
+                                //Ahora procedo a ver si puedo enviar de una vez el mensaje
+                                //Para eso busco el destinatario
+                                c = buscar(&c->contactos, nombreDestinatario);
+                                
+                                //Si esto se cumple, entonces está disponible para enviar el mensaje
+                                if(c->ipRegistrada != NULL && c->puertoRegistrado != -1){
+
+                                    //La dirección del socket del servidor
+                                    struct sockaddr_in client_addr;
+
+                                    //El manejador del socket, y una variable que guardará la cantidad de bytes que de verdad se leen
+                                    int socket_handler;
+
+                                    //Ahora intentaré hacer el socket nuevo
+                                    if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+                                        perror("Socket creation error");
+                                        return EXIT_FAILURE;
+                                    }
+                                    //Memset se encarga de asignar un valor a la memoria, en este caso, la
+                                    //idea es limpiar los valores de <serv_addr> que no necesito
+                                    memset(&client_addr, '0', sizeof(client_addr));
+
+                                    //Ahora coloco los valores que sí necesito
+                                    //Primero el protocolo: Ipv4
+                                    client_addr.sin_family = AF_INET;
+                                    //Ahora el puerto: SERVER_PORT
+                                    client_addr.sin_port = htons(c->puertoRegistrado);
+
+                                    //Ahora necesito convertir las direcciones a su forma binaria:
+                                    if(inet_pton(AF_INET, c->ipRegistrada, &client_addr.sin_addr) <= 0){
+                                        perror("Address invalid or not supported");
+                                    }
+                                    else if(connect(socket_handler, (struct sockaddr*) &client_addr, sizeof(client_addr)) < 0){
+                                        perror("Couldn't connect to server");
+                                    }
+                                    else{
+                                        //Conexión al cliente exitosa, cargo los datos del mensaje al buffer
+                                        strncpy(buffer, "1");
+                                        strncat(buffer, m->remitente, strlen(m->remitente));
+                                        strncat2(buffer, m->destinatario, strlen(m->destinatario));
+                                        strncat2(buffer, m->contenido, strlen(m->contenido));
+                                        if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido))) > 0){
+                                            //Mensaje enviado correctamente
+                                            m->estado = 1;
+                                        }
+                                        else{
+                                            perror("Error upon sending new message data to client");
+                                        }
+                                    }
+                                }
+                                else{
+                                    printf("Message couldn't be delivered immediately: User is not online\n");
+                                }
+                            }
+                            else{
+                                //No existe, retornar error    
+                                strncpy(buffer, "-1", 2);
+                                if((valread = send(new_socket, buffer, 2, 0)) < 0){
+                                    perror("Error while notifying failure to client sending message");
+                                }
+                                else{
+                                    printf("Client message delivery failure informed\n");
+                                }
+                            }
+                        }
+                        else{
+                            printf("Login with an unexisting user\n");
+                            //Le notifico que hubo un error
+                            strncpy(buffer, "-1", 2);
+                            if((valread = send(new_socket, buffer, 2, 0)) < 0){
+                                perror("Error while notifying failure to client upon login");
+                            }
+                            else{
+                                printf("Client login failure informed\n");
+                            }
+                        }
                     }
                     default:{
                         printf("Action not implemented yet");

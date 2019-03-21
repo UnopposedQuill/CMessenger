@@ -24,3 +24,14 @@ int cantidadDigitos(int numero){
     }
     return contador;
 }
+
+char * strncat2(char * s, const char * ct, int n){
+    char * t = s;
+    while(*(t++));
+    while((*(t++)=*(ct++)) && (n-- > 0));
+    t--;
+    do{
+        *(t++)='\0';
+    }while(n-- > 0);
+    return s;
+}

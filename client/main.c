@@ -50,9 +50,6 @@ int main(int argc, char** argv) {
     else{
         //Usaré esto para probar el sistema de envío de mensajes
 
-        //La dirección del socket que va a leer
-        struct sockaddr_in address;
-
         //La dirección del socket del servidor
         struct sockaddr_in serv_addr;
 
@@ -60,7 +57,8 @@ int main(int argc, char** argv) {
         int socket_handler = 0, valread;
 
         //El buffer que contendrá los datos que se le enviarán al servidor
-        char data[1024];
+        char data[BUFFER_SIZE];
+        memset(data, 0, BUFFER_SIZE);
         
         //El nombre del usuario para las pruebas
         char nombreUsuario[] = "Prueba";
@@ -92,14 +90,12 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         
-        //Ahora la segunda parte del mensaje, para esto me aseguro de que el buffer esté limpio
-        memset(data, 0, BUFFER_SIZE);
-        //Luego le agrego la siguiente información, son dos bytes que le dicen al servidor en qué puerto está escuchando el cliente
+        //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
         snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "0%d\0", CLIENT_PORT);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
         
-        //Ahora intento escribirle la segunda parte de los datos
-        if((valread = send(socket_handler, data, 9 + sizeof(int), 0)) < 0){
+        //Ahora intento escribirle los datos
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -120,10 +116,9 @@ int main(int argc, char** argv) {
         }
         
         close(socket_handler);
+        
         //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
-        
         //Tengo que reconectarme puesto que estas conexiones se crean por cada solicitud
-        
         //Para esto tengo que crear un nuevo socket como si fuera otro programa por completo
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
