@@ -356,7 +356,7 @@ int main(int argc, char** argv) {
                         //enviar un mensaje, sólo se permite enviar mensajes a elementos dentro de la
                         //lista de contactos
                         //inicio de sesión
-                        if(existeCliente(&clientes, buffer + 1)){
+                        if(existeCliente(&clientes, buffer)){
                             //Sí existe el usuario, así que lo busco
                             c = buscar(&clientes, buffer);
                             

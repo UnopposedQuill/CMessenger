@@ -494,7 +494,7 @@ int main(int argc, char** argv) {
                 case 3:{
                     //Enviar Mensaje, servicio numero 4 del servidor
                     //Primero necesito el remitente, destinatario y el contenido, el remitente es conseguible a partir del nombre de usuario
-                    char * destinatario, * contenido;
+                    char destinatario[128], contenido[256];
                     printf("Ingrese el destinatario: ");
                     scanf("%s", destinatario);
                     //Ahora necesito que el destinatario exista
@@ -507,11 +507,12 @@ int main(int argc, char** argv) {
                     scanf("%s", contenido);
                     
                     //Ahora paso los datos a data para enviarlos
-                    strncpy(data, nombreUsuario, strlen(nombreUsuario));
+                    strncpy(data, "4", 1);
+                    strncat2(data, nombreUsuario, strlen(nombreUsuario));
                     strncat2(data, destinatario, strlen(destinatario));
                     strncat2(data, contenido, strlen(contenido));
                     
-                    if(send(socket_handler, data, strlen(nombreUsuario)+strlen(destinatario)+strlen(contenido)+2, 0) < 0){
+                    if(send(socket_handler, data, strlen(nombreUsuario)+strlen(destinatario)+strlen(contenido)+3, 0) < 0){
                         perror("Error while writing data to server");
                         break;  
                     }
