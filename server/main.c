@@ -345,13 +345,13 @@ int main(int argc, char** argv) {
                             while(*(contenido++));
                             
                             //Si existe dentro de los contactos
-                            if(existeCliente(&c->contactos, nombreDestinatario)){
+                            if(existeCliente(c->contactos, nombreDestinatario)){
                                 //Existe, procedo a almacenarlo, y luego ver si puedo enviarlo
                                 //Primero el paquete
-                                nm = (NodoMensaje *) calloc(1, sizeof(NodoMensaje));
+                                nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
                                 
                                 //Luego el mensaje
-                                m = (Mensaje *) calloc(1, sizeof(Mensaje));
+                                m = (struct Mensaje *) calloc(1, sizeof(struct Mensaje));
                                 m->remitente = (char *) calloc(strlen(buffer), sizeof(char));
                                 m->destinatario = (char *) calloc(strlen(nombreDestinatario), sizeof(char));
                                 m->contenido = (char *) calloc(strlen(contenido), sizeof(char));
@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
                                 nm->mensaje = m;
                                 
                                 //Coloco el paquete en la base
-                                insertarMensajeAlInicio(mensajes, nm);
+                                insertarMensajeAlInicio(&mensajes, nm);
                                 printf("Message insertion successfull\n");
                                 
                                 //Ahora a notificar el envío del mensaje
@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
                                 
                                 //Ahora procedo a ver si puedo enviar de una vez el mensaje
                                 //Para eso busco el destinatario
-                                c = buscar(&c->contactos, nombreDestinatario);
+                                c = buscar(c->contactos, nombreDestinatario);
                                 
                                 //Si esto se cumple, entonces está disponible para enviar el mensaje
                                 if(c->ipRegistrada != NULL && c->puertoRegistrado != -1){
@@ -409,11 +409,11 @@ int main(int argc, char** argv) {
                                     }
                                     else{
                                         //Conexión al cliente exitosa, cargo los datos del mensaje al buffer
-                                        strncpy(buffer, "1");
+                                        strncpy(buffer, "1", 1);
                                         strncat(buffer, m->remitente, strlen(m->remitente));
                                         strncat2(buffer, m->destinatario, strlen(m->destinatario));
                                         strncat2(buffer, m->contenido, strlen(m->contenido));
-                                        if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido))) > 0){
+                                        if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido),0)) > 0){
                                             //Mensaje enviado correctamente
                                             m->estado = 1;
                                         }

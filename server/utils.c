@@ -36,7 +36,7 @@ char * strncat2(char * s, const char * ct, int n){
     return s;
 }
 
-char * strlen2(const char * s){
+int strlen2(const char * s){
     int contador = 0;
     while(*s || *(s+1)){
         contador++;
