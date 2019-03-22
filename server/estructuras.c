@@ -79,6 +79,7 @@ struct Cliente * buscar(struct ListaClientes * self, const char * nombreUsuario)
         if(strcmp(recorreNodos->cliente->nombreUsuario, nombreUsuario) == 0){
             return recorreNodos->cliente;
         }
+        recorreNodos = recorreNodos->siguiente;
     }
     return NULL;
 }

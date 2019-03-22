@@ -396,14 +396,15 @@ int main(int argc, char** argv) {
         char directiva = 0;
         while(directiva != 4){
             //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
-            printf("Bienvenido al cliente de CMessenger."
+            printf("\nBienvenido al cliente de CMessenger."
                     "\n"
                     "\n"
                     "1. Agregar Contacto\n"
                     "2. Ver Mensajes\n"
                     "3. Enviar Mensaje\n"
                     "4. Cerrar Sesion y salir\n"
-                    "5. Actualizar Datos de Sesión\n");
+                    "5. Actualizar Datos de Sesión\n"
+                    "6. Ver contactos\n");
             scanf("%1d", &directiva);
             switch(directiva){
                 case 1:{

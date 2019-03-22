@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
                                 insertarClienteAlInicio(buscar(&clientes, buffer)->contactos, nodoContacto);
 
                                 //Ahora le notifico que pude realizarlo
-                                snprintf(buffer, 1, "1");
+                                strncpy(buffer,"1", 1);
                                 if((valread = send(new_socket, buffer, 1, 0)) < 0){
                                     perror("Error while notifying success to client upon insertion");
                                 }
