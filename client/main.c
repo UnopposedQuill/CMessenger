@@ -238,52 +238,66 @@ int main(int argc, char** argv) {
     }
     //Si es cero, entonces es el subproceso, es el que va a estar recibiendo los nuevos mensajes
     else if(pid == 0){
-        //por el momento no colocaré nada aquí
-        return EXIT_SUCCESS;
-    }
+     //por el momento no colocaré nada aquí
+        while(1){
+            if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
+                //No pudo aceptarla
+                perror("\nError upon accepting a new connection");
+            }
+            else{
+                //Pudo aceptarla, intento leer los datos
+                //Primero tengo que leer el primer byte, el cual me dirá qué acción tengo que tomar
+                if((valread = recv(new_socket, buffer, BUFFER_SIZE, 0)) < -1){
+                    perror("Error upon reading new data");
+                }
+                write (descriptor[ESCRIBIR], buffer, strlen2(buffer));
+            }
+        }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
     else{
+        while(1){
         //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
         //Tengo que reconectarme puesto que estas conexiones se crean por cada solicitud
         //Para esto tengo que crear un nuevo socket como si fuera otro programa por completo
         //Ahora intentaré hacer el socket nuevo
-        if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-            perror("Socket creation error");
-            return EXIT_FAILURE;
+            if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+                perror("Socket creation error");
+                return EXIT_FAILURE;
+            }
+            //Memset se encarga de asignar un valor a la memoria, en este caso, la
+            //idea es limpiar los valores de <serv_addr> que no necesito
+            memset(&serv_addr, '0', sizeof(serv_addr));
+
+            //Ahora coloco los valores que sí necesito
+            //Primero el protocolo: Ipv4
+            serv_addr.sin_family = AF_INET;
+            //Ahora el puerto: SERVER_PORT
+            serv_addr.sin_port = htons(SERVER_PORT);
+
+            //Ahora necesito convertir las direcciones a su forma binaria:
+            if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                perror("Address invalid or not supported");
+                return EXIT_FAILURE;
+            }
+
+            if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+                perror("Couldn't connect to server");
+                return EXIT_FAILURE;
+            }
+
+            //Para esto reinicio a 0 todo el buffer
+            memset(data, 0, BUFFER_SIZE);
+            snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
+            strncat2(data, nombreUsuario, strlen(nombreUsuario));
+
+            if((valread = send(socket_handler, data, 1 + 2*(strlen(nombreUsuario)+1), 0)) < 0){
+                perror("Couldn't write data to server");
+                return EXIT_FAILURE;
+            }
+
+            printf("Data sent successfully, total bytes sent: %d\n", valread);
+
+            return EXIT_SUCCESS;
         }
-        //Memset se encarga de asignar un valor a la memoria, en este caso, la
-        //idea es limpiar los valores de <serv_addr> que no necesito
-        memset(&serv_addr, '0', sizeof(serv_addr));
-
-        //Ahora coloco los valores que sí necesito
-        //Primero el protocolo: Ipv4
-        serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: SERVER_PORT
-        serv_addr.sin_port = htons(SERVER_PORT);
-
-        //Ahora necesito convertir las direcciones a su forma binaria:
-        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
-            perror("Address invalid or not supported");
-            return EXIT_FAILURE;
-        }
-
-        if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
-            perror("Couldn't connect to server");
-            return EXIT_FAILURE;
-        }
-
-        //Para esto reinicio a 0 todo el buffer
-        memset(data, 0, BUFFER_SIZE);
-        snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
-        strncat2(data, nombreUsuario, strlen(nombreUsuario));
-
-        if((valread = send(socket_handler, data, 1 + 2*(strlen(nombreUsuario)+1), 0)) < 0){
-            perror("Couldn't write data to server");
-            return EXIT_FAILURE;
-        }
-
-        printf("Data sent successfully, total bytes sent: %d\n", valread);
-
-        return EXIT_SUCCESS;
     }
 }
