@@ -63,10 +63,11 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     
+    
     if(opcion == 1){
-        printf("Registrar\n");
+        printf("Registrar: %s\n",nombreUsuario);
     }else if(opcion == 2){
-        printf("Inicio de Sesión\n");
+        printf("Iniciar Sesión: %s\n",nombreUsuario);
     }else{
         printf("Invalid Selection\n");
         return EXIT_FAILURE;
