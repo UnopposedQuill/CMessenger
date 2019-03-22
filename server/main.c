@@ -356,10 +356,12 @@ int main(int argc, char** argv) {
                         //enviar un mensaje, sólo se permite enviar mensajes a elementos dentro de la
                         //lista de contactos
                         //inicio de sesión
+                        printf("New message delivery request\n");
+                        recv(new_socket, buffer, BUFFER_SIZE, 0);
                         if(existeCliente(&clientes, buffer)){
                             //Sí existe el usuario, así que lo busco
                             c = buscar(&clientes, buffer);
-                            
+                            printf("Sender found\n");
                             //Esto almacenará el destinatario
                             nombreDestinatario = buffer;
                             while(*(nombreDestinatario++));
@@ -368,6 +370,7 @@ int main(int argc, char** argv) {
                             contenido = nombreDestinatario;
                             while(*(contenido++));
                             
+                            printf("%s\n%s\n%s\n", buffer, nombreDestinatario, contenido);
                             //Si existe dentro de los contactos
                             if(existeCliente(c->contactos, nombreDestinatario)){
                                 //Existe, procedo a almacenarlo, y luego ver si puedo enviarlo
@@ -380,6 +383,10 @@ int main(int argc, char** argv) {
                                 m->destinatario = (char *) calloc(strlen(nombreDestinatario), sizeof(char));
                                 m->contenido = (char *) calloc(strlen(contenido), sizeof(char));
                                 
+                                m->remitente = buffer;
+                                m->destinatario = nombreDestinatario;
+                                m->contenido = contenido;
+                                
                                 //Coloco el mensaje en el paquete
                                 nm->mensaje = m;
                                 
@@ -390,10 +397,10 @@ int main(int argc, char** argv) {
                                 //Ahora a notificar el envío del mensaje
                                 strncpy(buffer, "1", 2);
                                 if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                    perror("Error while notifying failure to client upon login");
+                                    perror("Error while notifying success to client upon delivering message");
                                 }
                                 else{
-                                    printf("Client login failure informed\n");
+                                    printf("Client message delivery informed\n");
                                 }
                                 
                                 //Ahora procedo a ver si puedo enviar de una vez el mensaje
@@ -440,6 +447,7 @@ int main(int argc, char** argv) {
                                         if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido),0)) > 0){
                                             //Mensaje enviado correctamente
                                             m->estado = 1;
+                                            printf("Success upon delivering message instantly\n");
                                         }
                                         else{
                                             perror("Error upon sending new message data to client");
@@ -452,7 +460,7 @@ int main(int argc, char** argv) {
                             }
                             else{
                                 //No existe, retornar error    
-                                strncpy(buffer, "-1", 2);
+                                strncpy(buffer, "0", 1);
                                 if((valread = send(new_socket, buffer, 2, 0)) < 0){
                                     perror("Error while notifying failure to client sending message");
                                 }

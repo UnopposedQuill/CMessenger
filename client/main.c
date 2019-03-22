@@ -301,10 +301,11 @@ int main(int argc, char** argv) {
             else{
                 //Pudo aceptarla, intento leer los datos
                 //Primero tengo que leer el primer byte, el cual me dirá qué acción tengo que tomar
-                if((valread = recv(new_socket, data, BUFFER_SIZE, 0)) < -1){
+                if((valread = recv(new_socket, data, BUFFER_SIZE, 0)) < 0){
                     perror("Error upon reading new data");
                 }
                 else{
+                    printf("New Message incoming\n");
                     nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
                     buscador = data;
                     nm->mensaje->remitente = (char *) calloc(strlen(buscador)+1, sizeof(char));
@@ -316,6 +317,7 @@ int main(int argc, char** argv) {
                     nm->mensaje->contenido = (char *) calloc(strlen(buscador)+1, sizeof(char));
                     nm->mensaje->contenido = buscador;
                     insertarMensajeAlInicio(&mensajes, nm);
+                    printf("New Message added to buffer\n");
                 }
                 if((valread = recv(descriptorAHijo[LEER], data, BUFFER_SIZE, 0)) > 0){
                     snprintf(data, cantidadDigitos(cantidadMensajes(&mensajes)), "%d", cantidadMensajes(&mensajes));
@@ -506,6 +508,32 @@ int main(int argc, char** argv) {
                     printf("Ingrese el contenido del mensaje:\n");
                     scanf("%s", contenido);
                     
+                    //Ahora intentaré hacer el socket nuevo
+                    if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+                        perror("Socket creation error");
+                        return EXIT_FAILURE;
+                    }
+                    //Memset se encarga de asignar un valor a la memoria, en este caso, la
+                    //idea es limpiar los valores de <serv_addr> que no necesito
+                    memset(&serv_addr, '0', sizeof(serv_addr));
+
+                    //Ahora coloco los valores que sí necesito
+                    //Primero el protocolo: Ipv4
+                    serv_addr.sin_family = AF_INET;
+                    //Ahora el puerto: SERVER_PORT
+                    serv_addr.sin_port = htons(SERVER_PORT);
+
+                    //Ahora necesito convertir las direcciones a su forma binaria:
+                    if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                        perror("Address invalid or not supported");
+                        return EXIT_FAILURE;
+                    }
+
+                    if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+                        perror("Couldn't connect to server");
+                        return EXIT_FAILURE;
+                    }
+                    
                     //Ahora paso los datos a data para enviarlos
                     strncpy(data, "4", 1);
                     strncat2(data, nombreUsuario, strlen(nombreUsuario));
@@ -514,9 +542,12 @@ int main(int argc, char** argv) {
                     
                     if(send(socket_handler, data, strlen(nombreUsuario)+strlen(destinatario)+strlen(contenido)+3, 0) < 0){
                         perror("Error while writing data to server");
-                        break;  
+                        break;
                     }
+                    
+                    memset(data,0, BUFFER_SIZE);
                     recv(socket_handler, data, 1, 0);
+                    printf("%s\n",data);
                     if(data[0] == '1'){
                         //Envío correcto
                         printf("El mensaje fue enviado\n");
@@ -525,6 +556,8 @@ int main(int argc, char** argv) {
                         //Envío incorrecto
                         printf("El mensaje no fue enviado\n");
                     }
+                    
+                    close(new_socket);
                     break;
                 }
                 case 4:{
@@ -579,6 +612,8 @@ int main(int argc, char** argv) {
                             printf("No se pudo configurar los datos de recepción\n");
                         }
                     }
+                    close(new_socket);
+                    
                     break;
                 }
                 case 6:{

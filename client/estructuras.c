@@ -77,6 +77,7 @@ int cantidadMensajes(struct ListaMensajes* self){
     int resultado = 0;
     while(recorreNodos != NULL){
         resultado+=1;
+        recorreNodos = recorreNodos->siguiente;
     }
     return resultado;
 }
