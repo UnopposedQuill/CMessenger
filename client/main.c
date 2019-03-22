@@ -25,6 +25,8 @@
 #define SERVER_PORT 15000
 //#define CLIENT_PORT 15001
 
+#define MAX_WAITING_CONNECTIONS 3
+
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
 
@@ -47,8 +49,6 @@ int main(int argc, char** argv) {
     int server_fd, new_socket, valread;
 
     FILE *archivo;
-	char caracter;
-    char iniInformation[512];
     int puerto;
 
 	archivo = fopen("configFile.ini","r");
@@ -72,19 +72,19 @@ int main(int argc, char** argv) {
         fclose(archivo);
 
     //Dos descriptores que se usarán para la tubería entre ambos procesos del fork
-    int descriptor[2];
+    int descriptorAHijo[2];
+    int descriptorAPadre[2];
     char bufferTuberia[BUFFER_SIZE];
 
-    //Creo la tubería
-    pipe(descriptor);
-
-    //Usaré esto para probar el sistema de envío de mensajes
+    //Creo las tuberías
+    pipe(descriptorAHijo);
+    pipe(descriptorAPadre);
 
     //La dirección del socket del servidor
     struct sockaddr_in serv_addr;
 
     //El manejador del socket, y una variable que guardará la cantidad de bytes que de verdad se leen
-    int socket_handler = 0, valread;
+    int socket_handler = 0;
 
     //El buffer que contendrá los datos que se le enviarán al servidor
     char data[BUFFER_SIZE];
@@ -236,6 +236,14 @@ int main(int argc, char** argv) {
         printf("Invalid Selection\n");
         return EXIT_FAILURE;
     }
+    
+    struct ListaMensajes mensajes = {NULL};
+    struct ListaContactos contactos = {NULL};
+    
+    struct NodoMensaje * nm;
+    struct NodoContactos * nc;
+    
+    char * buscador;
 
     //Realizo un fork, y guardo el retorno en pid
     int pid = fork();
@@ -245,7 +253,40 @@ int main(int argc, char** argv) {
     }
     //Si es cero, entonces es el subproceso, es el que va a estar recibiendo los nuevos mensajes
     else if(pid == 0){
-     //por el momento no colocaré nada aquí
+        int opt = 1;
+        
+        struct sockaddr_in address;
+        int addrlen = sizeof(address);
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY;
+        address.sin_port = htons(puerto);
+        
+        //Primero creo un handler para el socket del servidor
+        if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){//@TODO: Eliminar el == 0
+            //Ocurrió un error al crear el socket
+            perror("Socket creation error");
+            return EXIT_FAILURE;
+        }
+        //Creación del socket exitosa, ahora lo que hago es que señalo al SO que reutilice el puerto y la ip
+        if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0){
+            perror("SO couldn't be instructed to reuse the socket address and port");
+            return EXIT_FAILURE;
+        }
+
+        //Ahora ya uniré el socket y la dirección, necesito el handler del socket, la dirección
+        //a unir y finalmente la longitud de la dirección
+        if(bind(server_fd, (struct sockaddr*) &address, (socklen_t) addrlen) < 0){
+            perror("Socket couldn't be bound to specified address, port or protocols");
+            return EXIT_FAILURE;
+        }
+
+        //Ahora falta señalarle al SO que va a escuchar del puerto, con un máximo de conexiones pendientes
+        if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
+            perror("Socket couldn't be signaled to listen");
+            return EXIT_FAILURE;
+        }
+        printf("Initialization Success, listening on port %d\n", puerto);
+        close(descriptorAHijo[ESCRIBIR]);
         while(1){
             if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
                 //No pudo aceptarla
@@ -257,17 +298,34 @@ int main(int argc, char** argv) {
                 if((valread = recv(new_socket, data, BUFFER_SIZE, 0)) < -1){
                     perror("Error upon reading new data");
                 }
-                write (descriptor[ESCRIBIR], data, strlen2(data));
+                else{
+                    nm = (struct NodoMensaje *) calloc(struct NodoMensaje);
+                    buscador = data;
+                    nm->mensaje->remitente = buscador;
+                    while(*(buscador++));
+                    nm->mensaje->destinatario = buscador;
+                    while(*(buscador++));
+                    nm->mensaje->contenido = buscador;
+                    insertarMensajeAlInicio(&mensajes, nm);
+                }
+                if((valread = recv(descriptorAHijo[LEER], data, BUFFER_SIZE, 0)) > 0){
+                    strncpy(data, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
+                    strncat2(data, nm->mensaje->destinatario, strlen(nm->mensaje->remitente));
+                    strncat2(data, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
+                    write(descriptorAPadre[ESCRIBIR], data, strlen2(data));
+                }
             }
         }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
     }
     else{
+        close(descriptorAPadre[ESCRIBIR]);
+        char directiva;
         while(1){
-        //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
-        //Tengo que reconectarme puesto que estas conexiones se crean por cada solicitud
-        //Para esto tengo que crear un nuevo socket como si fuera otro programa por completo
-        //Ahora intentaré hacer el socket nuevo
+            //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
+            scanf("%1d", &directiva);
+            
+            //Ahora intentaré hacer el socket nuevo
             if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
                 perror("Socket creation error");
                 return EXIT_FAILURE;

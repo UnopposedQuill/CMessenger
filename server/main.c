@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     char buffer[BUFFER_SIZE] = {0};
+    
     //Primero creo un handler para el socket del servidor
     if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){//@TODO: Eliminar el == 0
         //Ocurrió un error al crear el socket
@@ -258,7 +259,7 @@ int main(int argc, char** argv) {
                                         nc = c->contactos->primerNodo;
                                         while(nc != NULL){
                                             strncpy(buffer, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
-                                            if((valread = send(new_socket, buffer, strlen(buffer))) > 0){
+                                            if((valread = send(new_socket, buffer, strlen(buffer), 0)) > 0){
                                                 nc = nc->siguiente;
                                             }
                                             else if(cantidadIntentosFallidos < 3){
@@ -277,7 +278,7 @@ int main(int argc, char** argv) {
                                             strncpy(buffer, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
                                             strncat2(buffer, nm->mensaje->destinatario, strlen(nm->mensaje->destinatario));
                                             strncat2(buffer, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
-                                            if((valread = send(new_socket, buffer, strlen2(buffer))) > 0){
+                                            if((valread = send(new_socket, buffer, strlen2(buffer), 0)) > 0){
                                                 nc = nc->siguiente;
                                             }
                                             else if(cantidadIntentosFallidos < 3){
