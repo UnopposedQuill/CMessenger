@@ -52,11 +52,11 @@ struct ListaMensajes{
 };
 
 //Funciones de Manipulación de Listas de Clientes
-void insertarClienteAlInicio(struct ListaContactos *, struct NodoContactos *);
+void insertarContactoAlInicio(struct ListaContactos *, struct NodoContactos *);
 void imprimirListaContactos(struct ListaContactos *);
-void limpiarClientes(struct ListaContactos *);
-int cantidadClientes(struct ListaContactos *);
-int existeCliente(struct ListaContactos *, const char *);
+void limpiarContactos(struct ListaContactos *);
+int cantidadContactos(struct ListaContactos *);
+int existeContacto(struct ListaContactos *, const char *);
 
 //Funciones de Manipulación de Listas de Mensajes
 void insertarMensajeAlInicio(struct ListaMensajes *, struct NodoMensaje *);

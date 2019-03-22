@@ -267,12 +267,20 @@ int main(int argc, char** argv) {
             perror("Socket creation error");
             return EXIT_FAILURE;
         }
-        //Creación del socket exitosa, ahora lo que hago es que señalo al SO que reutilice el puerto y la ip
-        if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0){
-            perror("SO couldn't be instructed to reuse the socket address and port");
+        
+        int cantidadFallos = 0;
+        //Creación del socket exitosa, ahora lo que hago es que señalo al SO que reutilice la ip
+        //Esto es para ir incrementando la cantidad de puertos que voy usando
+        while(cantidadFallos < 3 && setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
+            perror("SO couldn't be instructed to reuse the socket address");
+            address.sin_port = htons(++puerto);
+            cantidadFallos++;
+        }
+        if(cantidadFallos >= 3){
+            perror("Too many retries to set the listening port");
             return EXIT_FAILURE;
         }
-
+        printf("Puerto seleccionado: %d", puerto);
         //Ahora ya uniré el socket y la dirección, necesito el handler del socket, la dirección
         //a unir y finalmente la longitud de la dirección
         if(bind(server_fd, (struct sockaddr*) &address, (socklen_t) addrlen) < 0){
@@ -287,6 +295,10 @@ int main(int argc, char** argv) {
         }
         printf("Initialization Success, listening on port %d\n", puerto);
         close(descriptorAHijo[ESCRIBIR]);
+        close(descriptorAPadre[LEER]);
+        //debo asegurarme de actualizarlo
+        send(descriptorAPadre[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto), 0);
+        
         while(1){
             if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
                 //No pudo aceptarla
@@ -299,7 +311,7 @@ int main(int argc, char** argv) {
                     perror("Error upon reading new data");
                 }
                 else{
-                    nm = (struct NodoMensaje *) calloc(struct NodoMensaje);
+                    nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
                     buscador = data;
                     nm->mensaje->remitente = buscador;
                     while(*(buscador++));
@@ -320,67 +332,158 @@ int main(int argc, char** argv) {
     }
     else{
         close(descriptorAPadre[ESCRIBIR]);
-        char directiva;
-        while(1){
-            //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
-            scanf("%1d", &directiva);
-            
-            //Ahora intentaré hacer el socket nuevo
-            if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-                perror("Socket creation error");
-                return EXIT_FAILURE;
-            }
-            //Memset se encarga de asignar un valor a la memoria, en este caso, la
-            //idea es limpiar los valores de <serv_addr> que no necesito
-            memset(&serv_addr, '0', sizeof(serv_addr));
-
-            //Ahora coloco los valores que sí necesito
-            //Primero el protocolo: Ipv4
-            serv_addr.sin_family = AF_INET;
-            //Ahora el puerto: SERVER_PORT
-            serv_addr.sin_port = htons(SERVER_PORT);
-
-            //Ahora necesito convertir las direcciones a su forma binaria:
-            if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
-                perror("Address invalid or not supported");
-                return EXIT_FAILURE;
-            }
-
-            if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
-                perror("Couldn't connect to server");
-                return EXIT_FAILURE;
-            }
-
-            //Para esto reinicio a 0 todo el buffer
-            memset(data, 0, BUFFER_SIZE);
-            snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
-            strncat2(data, nombreUsuario, strlen(nombreUsuario));
-
-            if((valread = send(socket_handler, data, 1 + 2*(strlen(nombreUsuario)+1), 0)) < 0){
-                perror("Couldn't write data to server");
-                return EXIT_FAILURE;
-            }
-
-            printf("Data sent successfully, total bytes sent: %d\n", valread);
-
-            printf("Bienvenido al cliente de CMessenger222.\n\n1. Agregar Contacto\n2. Cerrrar Sesión\n3. Ver Mensajes\n4. Enviar Mensaje\n5. Cerrar Sesion");
-            int opcion;
-            int datosMenu = scanf("%d", &opcion);
-            if(datosMenu <= 0){
-                perror("Invalid Selection");
-                return EXIT_FAILURE;
-            }
-
-            printf("Ingrese su nombre de usuario (Máximo 20 caracteres): ");
-            char nombreUsuario[21];
-
-            datosMenu = scanf("%20s", nombreUsuario);
-            if(datosMenu <= 0){
-                perror("Invalid input");
-                return EXIT_FAILURE;
-            }
-
-            }
-                return EXIT_SUCCESS;
+        close(descriptorAHijo[LEER]);
+        //Hasta que el hijo no le notifique cuál puerto seleccionó, no avanza
+        while(recv(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE, 0) > 0);
+        //Ahora intentaré hacer el socket nuevo para poder enviarlo al servidor
+        if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+            perror("Socket creation error");
+            return EXIT_FAILURE;
         }
+        //Memset se encarga de asignar un valor a la memoria, en este caso, la
+        //idea es limpiar los valores de <serv_addr> que no necesito
+        memset(&serv_addr, '0', sizeof(serv_addr));
+
+        //Ahora coloco los valores que sí necesito
+        //Primero el protocolo: Ipv4
+        serv_addr.sin_family = AF_INET;
+        //Ahora el puerto: SERVER_PORT
+        serv_addr.sin_port = htons(SERVER_PORT);
+
+        //Ahora necesito convertir las direcciones a su forma binaria:
+        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+            perror("Address invalid or not supported");
+            return EXIT_FAILURE;
+        }
+
+        if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+            perror("Couldn't connect to server");
+            return EXIT_FAILURE;
+        }
+
+        //Para esto reinicio a 0 todo el buffer
+        memset(data, 0, BUFFER_SIZE);
+        
+        snprintf(data, BUFFER_SIZE, "5%d", puerto);
+        strncat2(data, nombreUsuario, strlen(nombreUsuario));
+        if(send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
+            perror("Couldn't write data to server");
+            return EXIT_FAILURE;
+        }
+        else{
+            printf("Datos enviados exitosamente, esperando respuesta...\n");
+            if(recv(socket_handler, data, 1, 0) < 0){
+                perror("Error while reading server's response");
+                return EXIT_FAILURE;
+            }
+            else if(data[0] == '1'){
+                printf("Datos de recepción configurados exitosamente\n");
+            }
+            else{
+                printf("No se pudo configurar los datos de recepción\n");
+                return EXIT_FAILURE;
+            }
+        }
+        
+        
+        char directiva = 0;
+        while(directiva != 4){
+            //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
+            printf("Bienvenido al cliente de CMessenger."
+                    "\n"
+                    "\n"
+                    "1. Agregar Contacto\n"
+                    "2. Ver Mensajes\n"
+                    "3. Enviar Mensaje\n"
+                    "4. Cerrar Sesion y salir\n"
+                    "5. Actualizar Datos de Sesión\n");
+            scanf("%1d", &directiva);
+            switch(directiva){
+                case 1:{
+                    //Agregar un nuevo contacto
+                    
+                    //Ahora intentaré hacer el socket nuevo
+                    if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+                        perror("Socket creation error");
+                        return EXIT_FAILURE;
+                    }
+                    //Memset se encarga de asignar un valor a la memoria, en este caso, la
+                    //idea es limpiar los valores de <serv_addr> que no necesito
+                    memset(&serv_addr, '0', sizeof(serv_addr));
+
+                    //Ahora coloco los valores que sí necesito
+                    //Primero el protocolo: Ipv4
+                    serv_addr.sin_family = AF_INET;
+                    //Ahora el puerto: SERVER_PORT
+                    serv_addr.sin_port = htons(SERVER_PORT);
+
+                    //Ahora necesito convertir las direcciones a su forma binaria:
+                    if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                        perror("Address invalid or not supported");
+                        return EXIT_FAILURE;
+                    }
+
+                    if(connect(socket_handler, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+                        perror("Couldn't connect to server");
+                        return EXIT_FAILURE;
+                    }
+
+                    //Para esto reinicio a 0 todo el buffer
+                    memset(data, 0, BUFFER_SIZE);
+                    printf("Digite el nombre del Usuario: ");
+                    char * nombreContacto;
+                    if(scanf("%s", nombreContacto) <= 0){
+                        snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
+                        strncat2(data, nombreContacto, strlen(nombreContacto));
+
+                        if(send(socket_handler, data, 3 + strlen(nombreUsuario) + strlen(nombreContacto), 0) < 0){
+                            perror("Couldn't write data to server");
+                            return EXIT_FAILURE;
+                        }
+                        else{
+                            printf("Datos enviados exitosamente, esperando respuesta...\n");
+                            if(recv(socket_handler, data, 1, 0) < 0){
+                                perror("Error while reading server's response");
+                            }
+                            else if(data[0] == '1'){
+                                printf("Contacto agregado exitosamente");
+                            }
+                            else{
+                                printf("No se pudo agregar el contacto");
+                            }
+                        }
+                    }
+                    else{
+                        printf("Nombre no ingresado, cancelando...\n");
+                    }
+                    break;
+                }
+                case 2:{
+                    break;
+                }
+                case 3:{
+                    break;
+                }
+                case 4:{
+                    break;
+                }
+                case 5:{
+                    
+                    break;
+                }
+                default:{
+                    printf("Didn't recognize said option, please retry\n");
+                    break;
+                }
+            }
+        }
+        printf("Logging out...\n");
+        
+        
+        printf("Wiping data...\n");
+        limpiarContactos(&contactos);
+        limpiarMensajes(&mensajes);
+        printf("Exiting...\n");
+        return EXIT_SUCCESS;
+    }
 }

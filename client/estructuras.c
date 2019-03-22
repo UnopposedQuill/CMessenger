@@ -1,8 +1,8 @@
 #include <string.h>
 #include "estructuras.h"
 
-//Funciones Lista de Clientes
-void insertarClienteAlInicio(struct ListaContactos * self, struct NodoContactos * nc){
+//Funciones Lista de Contactos
+void insertarContactoAlInicio(struct ListaContactos * self, struct NodoContactos * nc){
     nc->siguiente = self->primerNodo;
     self->primerNodo = nc;
     return;
@@ -29,7 +29,7 @@ void limpiarContactos(struct ListaContactos* self){
     return;
 }
 
-int cantidadClientes(struct ListaContactos* self){
+int cantidadContactos(struct ListaContactos* self){
     struct NodoContactos * recorreNodos = self->primerNodo;
     int resultado = 0;
     while(recorreNodos != NULL){
@@ -38,7 +38,7 @@ int cantidadClientes(struct ListaContactos* self){
     return resultado;
 }
 
-int existeCliente(struct ListaContactos * self, const char * nombreContacto){
+int existeContacto(struct ListaContactos * self, const char * nombreContacto){
     struct NodoContactos * recorreNodos = self->primerNodo;
     while(recorreNodos != NULL){
         if(strcmp(recorreNodos->nombreContacto, nombreContacto) == 0){

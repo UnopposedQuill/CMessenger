@@ -464,6 +464,27 @@ int main(int argc, char** argv) {
                             }
                         }
                     }
+                    case 5:{
+                        //actualizar los datos de la sesión
+                        if((valread = recv(new_socket, buffer, BUFFER_SIZE, 0)) < 0){
+                            perror("Couldn't receive the data from the session update");
+                        }
+                        else{
+                            int puerto;
+                            sscanf(buffer, "%d", &puerto);
+                            buscador = buffer;
+                            while(*(buscador++));
+                            if(existeCliente(&clientes, buscador)){
+                                buscar(&clientes, buscador)->puertoRegistrado = puerto;
+                                strncpy(buffer, "1", 1);
+                            }
+                            else{
+                                strncpy(buffer, "0", 1);
+                            }
+                            send(new_socket, buffer, 1, 0);
+                        }
+                        break;
+                    }
                     default:{
                         printf("Action not implemented yet");
                         break;
