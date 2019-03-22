@@ -175,8 +175,31 @@ int main(int argc, char** argv) {
         }
 
         //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
-        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "0%d\0", CLIENT_PORT);
+        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "2%d\0", CLIENT_PORT);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
+        
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario), 0)) < 0){
+            perror("Couldn't write data to server");
+            return EXIT_FAILURE;
+        }
+
+        printf("Data sent successfully, total bytes sent: %d\n", valread);
+
+        //Ahora deseo recibir la confirmación del servidor
+        if((valread = recv(socket_handler, data, 1, 0)) < 0){
+            perror("Couldn't response data from server");
+            return EXIT_FAILURE;
+        }
+
+        if(data[0] == '1'){
+            printf("Correct login of new user");
+        }
+        else{
+            printf("Failure upon login of new user");
+            return EXIT_FAILURE;
+        }
+        close(socket_handler);
+        
     }else{
         printf("Invalid Selection\n");
         return EXIT_FAILURE;

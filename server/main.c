@@ -232,69 +232,72 @@ int main(int argc, char** argv) {
                     }
                     case 2:{
                         //inicio de sesión
-                        if(existeCliente(&clientes, buffer)){
-                            //Sí existe el usuario, así que lo busco
-                            c = buscar(&clientes, buffer);
-                            //En este punto la dirección debería seguir guardada en la información que usé en el accept
-                            strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
-                        
-                            //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
-                            if((valread = read(new_socket, buffer, sizeof(int))) > 0){
-                                c->puertoRegistrado = atoi(buffer);
-                                printf("Successful client login\n");
-                                //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
-                                
-                                //Ahora tengo que enviar todos los datos de los contactos que tiene el usuario
-                                strncpy(buffer, "1",1);
-                                
-                                //Voy a usar nc para recorrer toda la lista de contactos del cliente
-                                nc = c->contactos->primerNodo;
-                                buscador = buffer;
-                                while(nc != NULL){
-                                    strncat2(buscador, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
-                                    nc = nc->siguiente;
-                                    while(*(buscador++));
-                                }
-                                
-                                if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
-                                    perror("Error while sending contacts during login");
-                                }
-                                else{
-                                    printf("Client login operation behaved normally\n");
-                                    memset(buffer, 0, BUFFER_SIZE);
-                                    nm = mensajes.primerNodo;
-                                    while(nm != NULL){
-                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->remitente));
-                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->contenido));
-                                        //Me aseguro de que todos los mensajes los marque como enviados
-                                        nm->mensaje->estado = 1;
-                                        nm = nm->siguiente;
+                        if((valread = recv(new_socket, buffer, BUFFER_SIZE, 0))> 0){
+                            if(existeCliente(&clientes, buffer)){
+                                //Sí existe el usuario, así que lo busco
+                                c = buscar(&clientes, buffer);
+                                //En este punto la dirección debería seguir guardada en la información que usé en el accept
+                                strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
+
+                                //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
+                                if((valread = recv(new_socket, buffer, sizeof(int), 0)) > 0){
+                                    c->puertoRegistrado = atoi(buffer);
+                                    printf("Successful client login\n");
+                                    //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
+
+                                    //Ahora tengo que enviar todos los datos de los contactos que tiene el usuario
+                                    strncpy(buffer, "1",1);
+
+                                    //Voy a usar nc para recorrer toda la lista de contactos del cliente
+                                    nc = c->contactos->primerNodo;
+                                    buscador = buffer;
+                                    while(nc != NULL){
+                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
+                                        nc = nc->siguiente;
                                         while(*(buscador++));
                                     }
+
                                     if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
-                                        perror("Error while sending messages to client upon login");
+                                        perror("Error while sending contacts during login");
                                     }
                                     else{
                                         printf("Client login operation behaved normally\n");
+                                        memset(buffer, 0, BUFFER_SIZE);
+                                        nm = mensajes.primerNodo;
+                                        while(nm != NULL){
+                                            strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->remitente));
+                                            strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->contenido));
+                                            //Me aseguro de que todos los mensajes los marque como enviados
+                                            nm->mensaje->estado = 1;
+                                            nm = nm->siguiente;
+                                            while(*(buscador++));
+                                        }
+                                        if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
+                                            perror("Error while sending messages to client upon login");
+                                        }
+                                        else{
+                                            printf("Client login operation behaved normally\n");
+                                        }
                                     }
+                                }
+                                else{
+                                    //Ocurrió un error durante la lectura de datos
+                                    perror("Error upon reading username that's logging in");
                                 }
                             }
                             else{
-                                //Ocurrió un error durante la lectura de datos
-                                perror("Error upon reading username that's logging in");
+                                printf("Login with an unexisting user\n");
+                                //Le notifico que hubo un error
+                                snprintf(buffer, 1, "-1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying failure to client upon login");
+                                }
+                                else{
+                                    printf("Client login failure informed\n");
+                                }
                             }
                         }
-                        else{
-                            printf("Login with an unexisting user\n");
-                            //Le notifico que hubo un error
-                            snprintf(buffer, 1, "-1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying failure to client upon login");
-                            }
-                            else{
-                                printf("Client login failure informed\n");
-                            }
-                        }
+                        break;
                     }
                     case 3:{
                         //cierre de sesión
