@@ -276,19 +276,28 @@ int main(int argc, char** argv) {
                                         
                                         nm = mensajes.primerNodo;
                                         while(nm != NULL){
-                                            strncpy(buffer, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
-                                            strncat2(buffer, nm->mensaje->destinatario, strlen(nm->mensaje->destinatario));
-                                            strncat2(buffer, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
-                                            if((valread = send(new_socket, buffer, strlen2(buffer), 0)) > 0){
-                                                nc = nc->siguiente;
-                                            }
-                                            else if(cantidadIntentosFallidos < 3){
-                                                cantidadIntentosFallidos++;
+                                            if(strcmp(c->nombreUsuario, nm->mensaje->destinatario) == 0){
+                                                strncpy(buffer, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
+                                                strncat2(buffer, nm->mensaje->destinatario, strlen(nm->mensaje->destinatario));
+                                                buscador = buffer;
+                                                while(*(buscador++));
+                                                while(*(buscador++));
+                                                strncat2(buffer, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
+                                                if((valread = send(new_socket, buffer, strlen2(buffer), 0)) > 0){
+                                                    nc = nc->siguiente;
+                                                }
+                                                else if(cantidadIntentosFallidos < 3){
+                                                    cantidadIntentosFallidos++;
+                                                }
+                                                else{
+                                                    perror("Gave up delivering data to client upon login");
+                                                    nc = nc->siguiente;
+                                                }
                                             }
                                             else{
-                                                perror("Gave up delivering data to client upon login");
                                                 nc = nc->siguiente;
                                             }
+                                            
                                         }
                                         printf("Client login operation behaved normally\n");
                                     }
@@ -301,7 +310,7 @@ int main(int argc, char** argv) {
                             else{
                                 printf("Login with an unexisting user\n");
                                 //Le notifico que hubo un error
-                                snprintf(buffer, 1, "-1");
+                                strncpy(buffer, "0", 1);
                                 if((valread = send(new_socket, buffer, 1, 0)) < 0){
                                     perror("Error while notifying failure to client upon login");
                                 }
@@ -370,7 +379,6 @@ int main(int argc, char** argv) {
                             contenido = nombreDestinatario;
                             while(*(contenido++));
                             
-                            printf("%s\n%s\n%s\n", buffer, nombreDestinatario, contenido);
                             //Si existe dentro de los contactos
                             if(existeCliente(c->contactos, nombreDestinatario)){
                                 //Existe, procedo a almacenarlo, y luego ver si puedo enviarlo
@@ -379,13 +387,13 @@ int main(int argc, char** argv) {
                                 
                                 //Luego el mensaje
                                 m = (struct Mensaje *) calloc(1, sizeof(struct Mensaje));
-                                m->remitente = (char *) calloc(strlen(buffer), sizeof(char));
-                                m->destinatario = (char *) calloc(strlen(nombreDestinatario), sizeof(char));
-                                m->contenido = (char *) calloc(strlen(contenido), sizeof(char));
+                                m->remitente = (char *) calloc(strlen(buffer)+1, sizeof(char));
+                                m->destinatario = (char *) calloc(strlen(nombreDestinatario)+1, sizeof(char));
+                                m->contenido = (char *) calloc(strlen(contenido)+1, sizeof(char));
                                 
-                                m->remitente = buffer;
-                                m->destinatario = nombreDestinatario;
-                                m->contenido = contenido;
+                                strncpy(m->remitente, buffer, strlen(buffer));
+                                strncpy(m->destinatario, nombreDestinatario, strlen(nombreDestinatario));
+                                strncpy(m->contenido, contenido, strlen(contenido));
                                 
                                 //Coloco el mensaje en el paquete
                                 nm->mensaje = m;
@@ -395,7 +403,7 @@ int main(int argc, char** argv) {
                                 printf("Message insertion successfull\n");
                                 
                                 //Ahora a notificar el envío del mensaje
-                                strncpy(buffer, "1", 2);
+                                strncpy(buffer, "1", 1);
                                 if((valread = send(new_socket, buffer, 1, 0)) < 0){
                                     perror("Error while notifying success to client upon delivering message");
                                 }
@@ -440,10 +448,12 @@ int main(int argc, char** argv) {
                                     }
                                     else{
                                         //Conexión al cliente exitosa, cargo los datos del mensaje al buffer
-                                        strncpy(buffer, "1", 1);
-                                        strncat(buffer, m->remitente, strlen(m->remitente));
+                                        strncpy(buffer, m->remitente, strlen(m->remitente));
                                         strncat2(buffer, m->destinatario, strlen(m->destinatario));
-                                        strncat2(buffer, m->contenido, strlen(m->contenido));
+                                        buscador = buffer;
+                                        while(*(buscador++));
+                                        while(*(buscador++));
+                                        strncpy(buscador, m->contenido, strlen(m->contenido));
                                         if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido),0)) > 0){
                                             //Mensaje enviado correctamente
                                             m->estado = 1;

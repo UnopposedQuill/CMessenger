@@ -139,8 +139,6 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        printf("Data sent successfully, total bytes sent: %d\n", valread);
-
         //Ahora deseo recibir la confirmación del servidor
         if((valread = recv(socket_handler, data, 1, 0)) < 0){
             perror("Couldn't response data from server");
@@ -148,10 +146,10 @@ int main(int argc, char** argv) {
         }
 
         if(data[0] == '1'){
-            printf("Correct insertion of new user");
+            printf("Correct insertion of new user\n");
         }
         else{
-            printf("Failure upon insertion of new user");
+            printf("Failure upon insertion of new user\n");
             return EXIT_FAILURE;
         }
         close(socket_handler);
@@ -214,10 +212,10 @@ int main(int argc, char** argv) {
         }
 
         if(data[0] == '1'){
-            printf("Correct login of new user");
+            printf("Correct login of new user\n");
         }
         else{
-            printf("Failure upon login of new user");
+            printf("Failure upon login of new user\n");
             return EXIT_FAILURE;
         }
         close(socket_handler);
@@ -280,7 +278,7 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         
-        printf("Puerto seleccionado: %d", puerto);
+        printf("Puerto seleccionado: %d\n", puerto);
 
         //Ahora falta señalarle al SO que va a escuchar del puerto, con un máximo de conexiones pendientes
         if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
@@ -291,7 +289,11 @@ int main(int argc, char** argv) {
         close(descriptorAHijo[ESCRIBIR]);
         close(descriptorAPadre[LEER]);
         //debo asegurarme de actualizarlo
-        send(descriptorAPadre[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto), 0);
+        snprintf(bufferTuberia, cantidadDigitos(puerto)+1, "%d", puerto);
+        write(descriptorAPadre[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto));
+        printf("All parameters have been notified\n");
+        memset(data, 0, BUFFER_SIZE);
+        memset(bufferTuberia, 0, BUFFER_SIZE);
         
         while(1){
             if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
@@ -307,15 +309,26 @@ int main(int argc, char** argv) {
                 else{
                     printf("New Message incoming\n");
                     nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
+                    
                     buscador = data;
+                    for(int i = 0;i < strlen2(data);i++){
+                        printf("%d-",*(buscador+i));
+                    }
+                    
+                    printf("%s\n", buscador);
                     nm->mensaje->remitente = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    nm->mensaje->remitente = buscador;
+                    strncpy(nm->mensaje->remitente, buscador, strlen(buscador));
+                    
                     while(*(buscador++));
+                    printf("%s\n", buscador);
                     nm->mensaje->destinatario = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    nm->mensaje->destinatario = buscador;
+                    strncpy(nm->mensaje->destinatario, buscador, strlen(buscador));
+                    
                     while(*(buscador++));
+                    printf("%s\n", buscador);
                     nm->mensaje->contenido = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    nm->mensaje->contenido = buscador;
+                    strncpy(nm->mensaje->contenido, buscador, strlen(buscador));
+                    
                     insertarMensajeAlInicio(&mensajes, nm);
                     printf("New Message added to buffer\n");
                 }
@@ -326,7 +339,10 @@ int main(int argc, char** argv) {
                         nm = pop(&mensajes);
                         strncpy(data, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
                         strncat2(data, nm->mensaje->destinatario, strlen(nm->mensaje->remitente));
-                        strncat2(data, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
+                        buscador = data;
+                        while(*(buscador++));
+                        while(*(buscador++));
+                        strncpy(data, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
                         free(nm->mensaje->remitente);
                         free(nm->mensaje->destinatario);
                         free(nm->mensaje->contenido);
@@ -335,6 +351,8 @@ int main(int argc, char** argv) {
                         write(descriptorAPadre[ESCRIBIR], data, strlen2(data));
                     }
                 }
+                memset(data, 0, BUFFER_SIZE);
+                memset(bufferTuberia, 0, BUFFER_SIZE);
             }
         }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
@@ -342,8 +360,10 @@ int main(int argc, char** argv) {
     else{
         close(descriptorAPadre[ESCRIBIR]);
         close(descriptorAHijo[LEER]);
+        memset(bufferTuberia, 0, BUFFER_SIZE);
         //Hasta que el hijo no le notifique cuál puerto seleccionó, no avanza
-        while(recv(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE, 0) > 0);
+        while((read(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE)) < 0);
+        sscanf(bufferTuberia, "%d", &puerto);
         //Ahora intentaré hacer el socket nuevo para poder enviarlo al servidor
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
@@ -375,7 +395,7 @@ int main(int argc, char** argv) {
         
         snprintf(data, BUFFER_SIZE, "5%d", puerto);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
-        if(send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
+        if(send(socket_handler, data, 3 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -472,7 +492,9 @@ int main(int argc, char** argv) {
                 case 2:{
                     //Ver los mensajes, primero cargo cualquier mensaje que haya quedado del lado del
                     //Proceso hijo, servicio nativo del cliente, sin necesidad de usar el servidor
-                    recv(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE, 0);
+                    strncpy(bufferTuberia, "1", 1);
+                    write(descriptorAHijo[ESCRIBIR], bufferTuberia, BUFFER_SIZE);
+                    read(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE);
                     
                     //Muevo lo que leí a la cantidad de elementos
                     sscanf(bufferTuberia, "%d", BUFFER_SIZE, &cantidadElementos);
@@ -481,13 +503,13 @@ int main(int argc, char** argv) {
                         nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
                         buscador = bufferTuberia;
                         nm->mensaje->remitente = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        nm->mensaje->remitente = buscador;
+                        strncpy(nm->mensaje->remitente, buscador, strlen(buscador));
                         while(*(buscador++));
                         nm->mensaje->destinatario = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        nm->mensaje->destinatario = buscador;
+                        strncpy(nm->mensaje->destinatario, buscador, strlen(buscador));
                         while(*(buscador++));
                         nm->mensaje->contenido = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        nm->mensaje->contenido = buscador;
+                        strncpy(nm->mensaje->contenido, buscador, strlen(buscador));
                         insertarMensajeAlInicio(&mensajes, nm);
                     }
                     imprimirListaMensajes(&mensajes);
@@ -538,7 +560,10 @@ int main(int argc, char** argv) {
                     strncpy(data, "4", 1);
                     strncat2(data, nombreUsuario, strlen(nombreUsuario));
                     strncat2(data, destinatario, strlen(destinatario));
-                    strncat2(data, contenido, strlen(contenido));
+                    buscador = data;
+                    while(*(buscador++));
+                    while(*(buscador++));
+                    strncpy(buscador, contenido, strlen(contenido));
                     
                     if(send(socket_handler, data, strlen(nombreUsuario)+strlen(destinatario)+strlen(contenido)+3, 0) < 0){
                         perror("Error while writing data to server");
@@ -547,7 +572,6 @@ int main(int argc, char** argv) {
                     
                     memset(data,0, BUFFER_SIZE);
                     recv(socket_handler, data, 1, 0);
-                    printf("%s\n",data);
                     if(data[0] == '1'){
                         //Envío correcto
                         printf("El mensaje fue enviado\n");
@@ -596,7 +620,7 @@ int main(int argc, char** argv) {
 
                     snprintf(data, BUFFER_SIZE, "5%d", puerto);
                     strncat2(data, nombreUsuario, strlen(nombreUsuario));
-                    if(send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
+                    if(send(socket_handler, data, 3 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
                         perror("Couldn't write data to server");
                         return EXIT_FAILURE;
                     }
