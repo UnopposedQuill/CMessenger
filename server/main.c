@@ -229,6 +229,7 @@ int main(int argc, char** argv) {
                         else{
                             perror("Error while reading new extra data upon contact insertion");
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
                         break;
                     }
                     case 2:{
@@ -309,39 +310,47 @@ int main(int argc, char** argv) {
                                 }
                             }
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
                         break;
                     }
                     case 3:{
                         //cierre de sesión
-                        if(existeCliente(&clientes, buffer)){
-                            //Sí existe el usuario, así que lo busco
-                            c = buscar(&clientes, buffer);
-                            
-                            free(c->ipRegistrada);
-                            c->ipRegistrada = NULL;
-                            c->puertoRegistrado = -1;
+                        if(recv(new_socket, buffer, BUFFER_SIZE, 0) > 0){
+                            if(existeCliente(&clientes, buffer)){
+                                //Sí existe el usuario, así que lo busco
+                                c = buscar(&clientes, buffer);
 
-                            //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
-                            //Como no tiene datos que enviar, sólo le envío un caracter
-                            snprintf(buffer, 1, "1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying success to client upon login");
+                                free(c->ipRegistrada);
+                                c->ipRegistrada = NULL;
+                                c->puertoRegistrado = -1;
+
+                                //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
+                                //Como no tiene datos que enviar, sólo le envío un caracter
+                                snprintf(buffer, 1, "1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying success to client upon login");
+                                }
+                                else{
+                                    printf("Client logout operation behaved normally\n");
+                                }
                             }
                             else{
-                                printf("Client login operation behaved normally\n");
+                                printf("Logout with an unexisting user\n");
+                                //Le notifico que hubo un error
+                                snprintf(buffer, 1, "-1");
+                                if((valread = send(new_socket, buffer, 1, 0)) < 0){
+                                    perror("Error while notifying failure to client upon logout");
+                                }
+                                else{
+                                    printf("Client logout failure informed\n");
+                                }
                             }
                         }
                         else{
-                            printf("Login with an unexisting user\n");
-                            //Le notifico que hubo un error
-                            snprintf(buffer, 1, "-1");
-                            if((valread = send(new_socket, buffer, 1, 0)) < 0){
-                                perror("Error while notifying failure to client upon login");
-                            }
-                            else{
-                                printf("Client login failure informed\n");
-                            }
+                            perror("Error while reading logout data");
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
+                        break;
                     }
                     case 4:{
                         //enviar un mensaje, sólo se permite enviar mensajes a elementos dentro de la
@@ -463,6 +472,8 @@ int main(int argc, char** argv) {
                                 printf("Client login failure informed\n");
                             }
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
+                        break;
                     }
                     case 5:{
                         //actualizar los datos de la sesión
@@ -483,6 +494,7 @@ int main(int argc, char** argv) {
                             }
                             send(new_socket, buffer, 1, 0);
                         }
+                        memset(buffer, 0, BUFFER_SIZE);
                         break;
                     }
                     default:{

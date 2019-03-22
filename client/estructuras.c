@@ -9,6 +9,7 @@ void insertarContactoAlInicio(struct ListaContactos * self, struct NodoContactos
 }
 
 void imprimirListaContactos(struct ListaContactos * self){
+    printf("Contactos:\n");
     struct NodoContactos * recorreNodos = self->primerNodo;
     while(recorreNodos != NULL){
         printf("Nombre de Usuario: %s\n", recorreNodos->nombreContacto);
@@ -56,11 +57,13 @@ void insertarMensajeAlInicio(struct ListaMensajes * self, struct NodoMensaje* nm
 }
 
 void imprimirListaMensajes(struct ListaMensajes * self){
+    printf("Mensajes:\n");
     struct NodoMensaje * recorreNodos = self->primerNodo;
     while(recorreNodos != NULL){
         printf("Remitente: %s\n"
                "Destinatario: %s\n"
-               "Contenido: %s\n",
+               "Contenido: %s\n"
+                "-------------------------\n",
                recorreNodos->mensaje->remitente,
                recorreNodos->mensaje->destinatario,
                recorreNodos->mensaje->contenido);
@@ -91,4 +94,19 @@ void limpiarMensajes(struct ListaMensajes* self){
         recorreNodos = recorreNodos->siguiente;
     }
     return;
+}
+
+/**
+ * Esta función saca uno de los mensajes y los saca de la lista
+ * @param Una lista de mensajes de la cual se va a sacar el mensaje
+ * @return Un nodo mensaje con un mensaje adentro
+ */
+struct NodoMensaje * pop(struct ListaMensajes * self){
+    if(self->primerNodo == NULL){
+        return NULL;
+    }
+    struct NodoMensaje * recorreNodos = self->primerNodo;
+    self->primerNodo = recorreNodos->siguiente;
+    recorreNodos->siguiente = NULL;
+    return recorreNodos;
 }
