@@ -108,7 +108,7 @@ int cantidadMensajes(struct ListaMensajes* self){
     struct NodoMensaje * recorreNodos = self->primerNodo;
     int resultado = 0;
     while(recorreNodos != NULL){
-        resultado;
+        resultado++;
     }
     return resultado;
 }
