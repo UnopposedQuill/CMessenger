@@ -23,7 +23,7 @@
 
 //Me interesa definir estos puertos aquí, eventualmente se cambiarán por la lectura del archivo
 #define SERVER_PORT 15000
-#define CLIENT_PORT 15001
+//#define CLIENT_PORT 15001
 
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
@@ -39,13 +39,38 @@
  */
 int main(int argc, char** argv) {
 
+    FILE *archivo;
+	char caracter;
+    char iniInformation[512];
+    int puerto;
+
+	archivo = fopen("configFile.ini","r");
+
+	if (archivo == NULL)
+        {
+            printf("\nError de apertura del archivo. \n\n");
+        }
+        else
+        {
+            fscanf(archivo, "[SETUP]\nPort=%d", &puerto);
+            printf("%d\n", puerto);
+        }
+            //printf("\nEl contenido del archivo de prueba es \n\n");
+            /*while((caracter = fgetc(archivo)) != EOF)
+	    {
+		printf("%c",caracter);
+	    }
+        }
+        */
+        fclose(archivo);
+
     //Dos descriptores que se usarán para la tubería entre ambos procesos del fork
     int descriptor[2];
     char bufferTuberia[BUFFER_SIZE];
 
     //Creo la tubería
     pipe(descriptor);
-    
+
     //Usaré esto para probar el sistema de envío de mensajes
 
     //La dirección del socket del servidor
@@ -57,7 +82,7 @@ int main(int argc, char** argv) {
     //El buffer que contendrá los datos que se le enviarán al servidor
     char data[BUFFER_SIZE];
     memset(data, 0, BUFFER_SIZE);
-    
+
     printf("Bienvenido al cliente de CMessenger.\n\n1. Registrarse\n2. Iniciar Sesión\n");
     int opcion;
     int datosMenu = scanf("%d", &opcion);
@@ -74,10 +99,10 @@ int main(int argc, char** argv) {
         perror("Invalid input");
         return EXIT_FAILURE;
     }
-    
+
     if(opcion == 1){
         printf("Registrar: %s\n",nombreUsuario);
-        
+
         //Ahora intentaré hacer el socket nuevo
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
@@ -106,11 +131,11 @@ int main(int argc, char** argv) {
         }
 
         //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
-        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "0%d\0", CLIENT_PORT);
+        snprintf(data, 2 + cantidadDigitos(puerto), "0%d\0", puerto);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
 
         //Ahora intento escribirle los datos
-        if((valread = send(socket_handler, data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario), 0)) < 0){
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -131,7 +156,7 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         close(socket_handler);
-        
+
     }else if(opcion == 2){
         printf("Iniciar Sesión: %s\n",nombreUsuario);
 
@@ -175,10 +200,10 @@ int main(int argc, char** argv) {
         }
 
         //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
-        snprintf(data, 2 + cantidadDigitos(CLIENT_PORT), "2%d\0", CLIENT_PORT);
+        snprintf(data, 2 + cantidadDigitos(puerto), "2%d\0", puerto);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
-        
-        if((valread = send(socket_handler, data, 2 + cantidadDigitos(CLIENT_PORT) + strlen(nombreUsuario), 0)) < 0){
+
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -199,12 +224,12 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         close(socket_handler);
-        
+
     }else{
         printf("Invalid Selection\n");
         return EXIT_FAILURE;
     }
-    
+
     //Realizo un fork, y guardo el retorno en pid
     int pid = fork();
     //Si es menor a cero, no pudo realizarlo, error
