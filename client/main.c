@@ -53,13 +53,15 @@ int main(int argc, char** argv) {
     
     archivo = fopen("configFile.ini","r");
     if (archivo == NULL){
-        printf("\nError de apertura del archivo. \n\n");
+        printf("\nError de apertura del archivo. Utilizando puerto por defecto\n\n");
+        puerto = 15001;
     }
     else{
         fscanf(archivo, "[SETUP]\nPort=%d", &puerto);
         //printf("%d\n", puerto);
+        fclose(archivo);
     }
-    fclose(archivo);
+    
 
     //Dos descriptores que se usarán para la tubería entre ambos procesos del fork
     int descriptorAHijo[2];
@@ -205,8 +207,6 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        printf("Data sent successfully, total bytes sent: %d\n", valread);
-
         //Ahora deseo recibir la confirmación del servidor
         if((valread = recv(socket_handler, data, 1, 0)) < 0){
             perror("Couldn't response data from server");
@@ -258,11 +258,20 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         
-        int cantidadFallos = 0;
+        
         //Creación del socket exitosa, ahora lo que hago es que señalo al SO que reutilice la ip
         //Esto es para ir incrementando la cantidad de puertos que voy usando
-        while(cantidadFallos < 3 && setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
+        if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
             perror("SO couldn't be instructed to reuse the socket address");
+            return EXIT_FAILURE;
+        }
+        
+        int cantidadFallos = 0;
+        
+        //Ahora ya uniré el socket y la dirección, necesito el handler del socket, la dirección
+        //a unir y finalmente la longitud de la dirección
+        while(cantidadFallos < 3 && (bind(server_fd, (struct sockaddr*) &address, (socklen_t) addrlen) < 0)){
+            perror("Socket couldn't be bound to specified address, port or protocols");
             address.sin_port = htons(++puerto);
             cantidadFallos++;
         }
@@ -270,13 +279,8 @@ int main(int argc, char** argv) {
             perror("Too many retries to set the listening port");
             return EXIT_FAILURE;
         }
+        
         printf("Puerto seleccionado: %d", puerto);
-        //Ahora ya uniré el socket y la dirección, necesito el handler del socket, la dirección
-        //a unir y finalmente la longitud de la dirección
-        if(bind(server_fd, (struct sockaddr*) &address, (socklen_t) addrlen) < 0){
-            perror("Socket couldn't be bound to specified address, port or protocols");
-            return EXIT_FAILURE;
-        }
 
         //Ahora falta señalarle al SO que va a escuchar del puerto, con un máximo de conexiones pendientes
         if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
@@ -434,35 +438,31 @@ int main(int argc, char** argv) {
                     //Para esto reinicio a 0 todo el buffer
                     memset(data, 0, BUFFER_SIZE);
                     printf("Digite el nombre del Usuario: ");
-                    char * nombreContacto;
-                    if(scanf("%s", nombreContacto) <= 0){
-                        snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
-                        strncat2(data, nombreContacto, strlen(nombreContacto));
+                    char nombreContacto[128];
+                    scanf("%s", nombreContacto);
+                    snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
+                    strncat2(data, nombreContacto, strlen(nombreContacto));
 
-                        if(send(socket_handler, data, 3 + strlen(nombreUsuario) + strlen(nombreContacto), 0) < 0){
-                            perror("Couldn't write data to server");
-                            return EXIT_FAILURE;
-                        }
-                        else{
-                            printf("Datos enviados exitosamente, esperando respuesta...\n");
-                            if(recv(socket_handler, data, 1, 0) < 0){
-                                perror("Error while reading server's response");
-                            }
-                            else if(data[0] == '1'){
-                                //tengo que agregar el contacto a este lado
-                                nc = (struct NodoContactos *)calloc(1, sizeof(struct NodoContactos));
-                                nc->nombreContacto = (char *)calloc(strlen(nombreContacto)+1, sizeof(char));
-                                nc->nombreContacto = nombreContacto;
-                                insertarContactoAlInicio(&contactos, nc);
-                                printf("Contacto agregado exitosamente");
-                            }
-                            else{
-                                printf("No se pudo agregar el contacto");
-                            }
-                        }
+                    if(send(socket_handler, data, 3 + strlen(nombreUsuario) + strlen(nombreContacto), 0) < 0){
+                        perror("Couldn't write data to server");
+                        return EXIT_FAILURE;
                     }
                     else{
-                        printf("Nombre no ingresado, cancelando...\n");
+                        printf("Datos enviados exitosamente, esperando respuesta...\n");
+                        if(recv(socket_handler, data, 1, 0) < 0){
+                            perror("Error while reading server's response");
+                        }
+                        else if(data[0] == '1'){
+                            //tengo que agregar el contacto a este lado
+                            nc = (struct NodoContactos *)calloc(1, sizeof(struct NodoContactos));
+                            nc->nombreContacto = (char *)calloc(strlen(nombreContacto)+1, sizeof(char));
+                            nc->nombreContacto = nombreContacto;
+                            insertarContactoAlInicio(&contactos, nc);
+                            printf("Contacto agregado exitosamente");
+                        }
+                        else{
+                            printf("No se pudo agregar el contacto");
+                        }
                     }
                     break;
                 }

@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
                         //Primero creo una variable que se encargará de guardar el nombre del supuesto contacto
                         //La cual supuestamente está luego de la string del nombre del cliente
                         if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
-                            char * nombreContacto = buffer + 1;
+                            char * nombreContacto = buffer;
 
                             //Este while me deja la variable justo después del caracter nulo
                             while(*(nombreContacto++));
