@@ -39,6 +39,13 @@
  */
 int main(int argc, char** argv) {
 
+    /*
+     * Primero creo los handles para los sockets que usaré:
+     * server_fd: El socket principal del servidor
+     * new_socket: El socket que intenta comunicarse con el servidor
+     */
+    int server_fd, new_socket, valread;
+
     FILE *archivo;
 	char caracter;
     char iniInformation[512];
@@ -247,13 +254,14 @@ int main(int argc, char** argv) {
             else{
                 //Pudo aceptarla, intento leer los datos
                 //Primero tengo que leer el primer byte, el cual me dirá qué acción tengo que tomar
-                if((valread = recv(new_socket, buffer, BUFFER_SIZE, 0)) < -1){
+                if((valread = recv(new_socket, data, BUFFER_SIZE, 0)) < -1){
                     perror("Error upon reading new data");
                 }
-                write (descriptor[ESCRIBIR], buffer, strlen2(buffer));
+                write (descriptor[ESCRIBIR], data, strlen2(data));
             }
         }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
+    }
     else{
         while(1){
         //Ahora me interesa intentar insertar un nuevo contacto dentro de la lista de contactos dentro del servidor
@@ -297,7 +305,24 @@ int main(int argc, char** argv) {
 
             printf("Data sent successfully, total bytes sent: %d\n", valread);
 
-            return EXIT_SUCCESS;
+            printf("Bienvenido al cliente de CMessenger222.\n\n1. Agregar Contacto\n2. Cerrrar Sesión\n3. Ver Mensajes\n4. Enviar Mensaje\n5. Cerrar Sesion");
+            int opcion;
+            int datosMenu = scanf("%d", &opcion);
+            if(datosMenu <= 0){
+                perror("Invalid Selection");
+                return EXIT_FAILURE;
+            }
+
+            printf("Ingrese su nombre de usuario (Máximo 20 caracteres): ");
+            char nombreUsuario[21];
+
+            datosMenu = scanf("%20s", nombreUsuario);
+            if(datosMenu <= 0){
+                perror("Invalid input");
+                return EXIT_FAILURE;
+            }
+
+            }
+                return EXIT_SUCCESS;
         }
-    }
 }
