@@ -127,3 +127,14 @@ void limpiarMensajes(struct ListaMensajes* self){
     }
     return;
 }
+
+int cantidadMensajesUsuario(struct ListaMensajes * self, const char * nombreUsuario){
+    struct NodoMensaje * recorreNodos = self->primerNodo;
+    int resultado = 0;
+    while(recorreNodos != NULL){
+        if(strcmp(recorreNodos->mensaje->destinatario, nombreUsuario) == 0){
+            resultado++;
+        }
+    }
+    return resultado;
+}

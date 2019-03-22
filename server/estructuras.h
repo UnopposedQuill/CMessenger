@@ -69,5 +69,6 @@ void insertarMensajeAlInicio(struct ListaMensajes *, struct NodoMensaje *);
 void imprimirListaMensajes(struct ListaMensajes *);
 void limpiarMensajes(struct ListaMensajes *);
 int cantidadMensajes(struct ListaMensajes *);
+int cantidadMensajesUsuario(struct ListaMensajes *, const char *);
 
 #endif /* ESTRUCTURAS_H */

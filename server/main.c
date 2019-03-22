@@ -243,41 +243,52 @@ int main(int argc, char** argv) {
                                 if((valread = recv(new_socket, buffer, sizeof(int), 0)) > 0){
                                     c->puertoRegistrado = atoi(buffer);
                                     printf("Successful client login\n");
-                                    //Ahora me falta notificar al cliente que su inicio de sesión fue exitoso
-
-                                    //Ahora tengo que enviar todos los datos de los contactos que tiene el usuario
+                                    
+                                    //Primero el header que dice login exitoso
                                     strncpy(buffer, "1",1);
-
-                                    //Voy a usar nc para recorrer toda la lista de contactos del cliente
-                                    nc = c->contactos->primerNodo;
-                                    buscador = buffer;
-                                    while(nc != NULL){
-                                        strncat2(buscador, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
-                                        nc = nc->siguiente;
-                                        while(*(buscador++));
-                                    }
-
-                                    if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
-                                        perror("Error while sending contacts during login");
-                                    }
-                                    else{
-                                        printf("Client login operation behaved normally\n");
-                                        memset(buffer, 0, BUFFER_SIZE);
+                                    
+                                    //Ahora me falta enviar al cliente todos sus datos
+                                    //Primero tengo que enviar todos los datos de los contactos que tiene el usuario
+                                    int cantidadElementosAEnviar = cantidadClientes(c->contactos);
+                                    int cantidadIntentosFallidos = 0;
+                                    snprintf(buffer, cantidadDigitos(cantidadElementosAEnviar), "%d", cantidadElementosAEnviar);
+                                    
+                                    if((valread = send(new_socket, buffer, 1 + cantidadDigitos(cantidadElementosAEnviar), 0)) > 0){
+                                        //Voy a usar nc para recorrer toda la lista de contactos del cliente
+                                        nc = c->contactos->primerNodo;
+                                        while(nc != NULL){
+                                            strncpy(buffer, nc->cliente->nombreUsuario, strlen(nc->cliente->nombreUsuario));
+                                            if((valread = send(new_socket, buffer, strlen(buffer))) > 0){
+                                                nc = nc->siguiente;
+                                            }
+                                            else if(cantidadIntentosFallidos < 3){
+                                                cantidadIntentosFallidos++;
+                                            }
+                                            else{
+                                                perror("Gave up delivering data to client upon login");
+                                                nc = nc->siguiente;
+                                            }
+                                        }
+                                        printf("Contacts delivery successfull\n");
+                                        cantidadElementosAEnviar = cantidadMensajesUsuario(&mensajes, c->nombreUsuario);
+                                        
                                         nm = mensajes.primerNodo;
                                         while(nm != NULL){
-                                            strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->remitente));
-                                            strncat2(buscador, nc->cliente->nombreUsuario, strlen(nm->mensaje->contenido));
-                                            //Me aseguro de que todos los mensajes los marque como enviados
-                                            nm->mensaje->estado = 1;
-                                            nm = nm->siguiente;
-                                            while(*(buscador++));
+                                            strncpy(buffer, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
+                                            strncat2(buffer, nm->mensaje->destinatario, strlen(nm->mensaje->destinatario));
+                                            strncat2(buffer, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
+                                            if((valread = send(new_socket, buffer, strlen2(buffer))) > 0){
+                                                nc = nc->siguiente;
+                                            }
+                                            else if(cantidadIntentosFallidos < 3){
+                                                cantidadIntentosFallidos++;
+                                            }
+                                            else{
+                                                perror("Gave up delivering data to client upon login");
+                                                nc = nc->siguiente;
+                                            }
                                         }
-                                        if((valread = send(new_socket, buffer, strlen2(buffer), 0)) < 0){
-                                            perror("Error while sending messages to client upon login");
-                                        }
-                                        else{
-                                            printf("Client login operation behaved normally\n");
-                                        }
+                                        printf("Client login operation behaved normally\n");
                                     }
                                 }
                                 else{
