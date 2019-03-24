@@ -22,7 +22,7 @@
 #include "utils.h"
 
 //Me interesa definir estos puertos aquí, eventualmente se cambiarán por la lectura del archivo
-#define SERVER_PORT 15000
+//#define SERVER_PORT 15000
 //#define CLIENT_PORT 15001
 
 #define MAX_WAITING_CONNECTIONS 3
@@ -31,7 +31,7 @@
 #define BUFFER_SIZE 1024
 
 //Finalmente la dirección en la que supuestamente está el servidor, también se cambiará desde el .ini
-#define SERVER_ADDRESS "127.0.0.1"
+//#define SERVER_ADDRESS "127.0.0.1"
 
 //Esto es para el pipe que es necesario para comunicar ambos procesos
 #define LEER 0
@@ -49,17 +49,24 @@ int main(int argc, char** argv) {
     int server_fd, new_socket, valread;
 
     FILE *archivo;
-    int puerto;
+    int puertoCliente, puertoServidor;
+    char direccionServidor[64] = "127.0.0.1";
     
     archivo = fopen("configFile.ini","r");
     if (archivo == NULL){
-        printf("\nError de apertura del archivo. Utilizando puerto por defecto\n\n");
-        puerto = 15001;
+        printf("\nError de apertura del archivo. Utilizando datos por defecto\n\n");
+        puertoCliente = 15001;
+        puertoServidor = 15000;
     }
     else{
-        fscanf(archivo, "[SETUP]\nPort=%d", &puerto);
-        //printf("%d\n", puerto);
+        fscanf(archivo, 
+                "[SETUP]\n"
+                "Port=%d\n"
+                "ServerPort=%d\n"
+                "ServerAddress=%s\n", &puertoCliente, &puertoServidor, direccionServidor);
+        //printf("%d\n", puertoCliente);
         fclose(archivo);
+        printf("Archivo de inicialización leído correctamente\n");
     }
     
 
@@ -112,11 +119,11 @@ int main(int argc, char** argv) {
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: SERVER_PORT
-        serv_addr.sin_port = htons(SERVER_PORT);
+        //Ahora el puerto: puertoServidor
+        serv_addr.sin_port = htons(puertoServidor);
 
         //Ahora necesito convertir las direcciones a su forma binaria:
-        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+        if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
             perror("Address invalid or not supported");
             return EXIT_FAILURE;
         }
@@ -127,12 +134,12 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
-        snprintf(data, 2 + cantidadDigitos(puerto), "0%d\0", puerto);
+        //Ahora la información que agrego es: el tipo de servicio, el puertoCliente en el que escucharé y el nombre del usuario
+        snprintf(data, 2 + cantidadDigitos(puertoCliente), "0%d\0", puertoCliente);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
 
         //Ahora intento escribirle los datos
-        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0)) < 0){
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puertoCliente) + strlen(nombreUsuario), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -179,11 +186,11 @@ int main(int argc, char** argv) {
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: SERVER_PORT
-        serv_addr.sin_port = htons(SERVER_PORT);
+        //Ahora el puerto: puertoServidor
+        serv_addr.sin_port = htons(puertoServidor);
 
         //Ahora necesito convertir las direcciones a su forma binaria:
-        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+        if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
             perror("Address invalid or not supported");
             return EXIT_FAILURE;
         }
@@ -194,11 +201,11 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        //Ahora la información que agrego es: el tipo de servicio, el puerto en el que escucharé y el nombre del usuario
-        snprintf(data, 2 + cantidadDigitos(puerto), "2%d\0", puerto);
+        //Ahora la información que agrego es: el tipo de servicio, el puertoCliente en el que escucharé y el nombre del usuario
+        snprintf(data, 2 + cantidadDigitos(puertoCliente), "2%d\0", puertoCliente);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
 
-        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0)) < 0){
+        if((valread = send(socket_handler, data, 2 + cantidadDigitos(puertoCliente) + strlen(nombreUsuario), 0)) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -242,7 +249,7 @@ int main(int argc, char** argv) {
         int addrlen = sizeof(address);
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = htons(puerto);
+        address.sin_port = htons(puertoCliente);
         
         //Primero creo un handler para el socket del servidor
         if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){//@TODO: Eliminar el == 0
@@ -253,7 +260,6 @@ int main(int argc, char** argv) {
         
         
         //Creación del socket exitosa, ahora lo que hago es que señalo al SO que reutilice la ip
-        //Esto es para ir incrementando la cantidad de puertos que voy usando
         if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
             perror("SO couldn't be instructed to reuse the socket address");
             return EXIT_FAILURE;
@@ -265,7 +271,7 @@ int main(int argc, char** argv) {
         //a unir y finalmente la longitud de la dirección
         while(cantidadFallos < 3 && (bind(server_fd, (struct sockaddr*) &address, (socklen_t) addrlen) < 0)){
             perror("Socket couldn't be bound to specified address, port or protocols");
-            address.sin_port = htons(++puerto);
+            address.sin_port = htons(++puertoCliente);
             cantidadFallos++;
         }
         if(cantidadFallos >= 3){
@@ -273,18 +279,18 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         
-        printf("Puerto seleccionado: %d\n", puerto);
+        printf("Puerto seleccionado: %d\n", puertoCliente);
 
-        //Ahora falta señalarle al SO que va a escuchar del puerto, con un máximo de conexiones pendientes
+        //Ahora falta señalarle al SO que va a escuchar del puertoCliente, con un máximo de conexiones pendientes
         if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
             perror("Socket couldn't be signaled to listen");
             return EXIT_FAILURE;
         }
-        printf("Initialization Success, listening on port %d\n", puerto);
+        printf("Initialization Success, listening on port %d\n", puertoCliente);
         close(descriptor[LEER]);
         //debo asegurarme de actualizarlo
-        snprintf(bufferTuberia, cantidadDigitos(puerto)+1, "%d", puerto);
-        write(descriptor[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto));
+        snprintf(bufferTuberia, cantidadDigitos(puertoCliente)+1, "%d", puertoCliente);
+        write(descriptor[ESCRIBIR], bufferTuberia, cantidadDigitos(puertoCliente));
         printf("All parameters have been notified\n");
         memset(data, 0, BUFFER_SIZE);
         memset(bufferTuberia, 0, BUFFER_SIZE);
@@ -318,9 +324,9 @@ int main(int argc, char** argv) {
     else{
         close(descriptor[ESCRIBIR]);
         memset(bufferTuberia, 0, BUFFER_SIZE);
-        //Hasta que el hijo no le notifique cuál puerto seleccionó, no avanza
+        //Hasta que el hijo no le notifique cuál puertoCliente seleccionó, no avanza
         while((read(descriptor[LEER], bufferTuberia, BUFFER_SIZE)) < 0);
-        sscanf(bufferTuberia, "%d", &puerto);
+        sscanf(bufferTuberia, "%d", &puertoCliente);
         //Ahora intentaré hacer el socket nuevo para poder enviarlo al servidor
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
             perror("Socket creation error");
@@ -333,11 +339,11 @@ int main(int argc, char** argv) {
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: SERVER_PORT
-        serv_addr.sin_port = htons(SERVER_PORT);
+        //Ahora el puerto: puertoServidor
+        serv_addr.sin_port = htons(puertoServidor);
 
         //Ahora necesito convertir las direcciones a su forma binaria:
-        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+        if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
             perror("Address invalid or not supported");
             return EXIT_FAILURE;
         }
@@ -350,9 +356,9 @@ int main(int argc, char** argv) {
         //Para esto reinicio a 0 todo el buffer
         memset(data, 0, BUFFER_SIZE);
         
-        snprintf(data, BUFFER_SIZE, "5%d", puerto);
+        snprintf(data, BUFFER_SIZE, "5%d", puertoCliente);
         strncat2(data, nombreUsuario, strlen(nombreUsuario));
-        if(send(socket_handler, data, 3 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
+        if(send(socket_handler, data, 3 + cantidadDigitos(puertoCliente) + strlen(nombreUsuario), 0) < 0){
             perror("Couldn't write data to server");
             return EXIT_FAILURE;
         }
@@ -400,11 +406,11 @@ int main(int argc, char** argv) {
                     //Ahora coloco los valores que sí necesito
                     //Primero el protocolo: Ipv4
                     serv_addr.sin_family = AF_INET;
-                    //Ahora el puerto: SERVER_PORT
-                    serv_addr.sin_port = htons(SERVER_PORT);
+                    //Ahora el puerto: puertoServidor
+                    serv_addr.sin_port = htons(puertoServidor);
 
                     //Ahora necesito convertir las direcciones a su forma binaria:
-                    if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                    if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
                         perror("Address invalid or not supported");
                         return EXIT_FAILURE;
                     }
@@ -472,11 +478,11 @@ int main(int argc, char** argv) {
                     //Ahora coloco los valores que sí necesito
                     //Primero el protocolo: Ipv4
                     serv_addr.sin_family = AF_INET;
-                    //Ahora el puerto: SERVER_PORT
-                    serv_addr.sin_port = htons(SERVER_PORT);
+                    //Ahora el puerto: puertoServidor
+                    serv_addr.sin_port = htons(puertoServidor);
 
                     //Ahora necesito convertir las direcciones a su forma binaria:
-                    if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                    if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
                         perror("Address invalid or not supported");
                         return EXIT_FAILURE;
                     }
@@ -531,11 +537,11 @@ int main(int argc, char** argv) {
                     //Ahora coloco los valores que sí necesito
                     //Primero el protocolo: Ipv4
                     serv_addr.sin_family = AF_INET;
-                    //Ahora el puerto: SERVER_PORT
-                    serv_addr.sin_port = htons(SERVER_PORT);
+                    //Ahora el puerto: puertoServidor
+                    serv_addr.sin_port = htons(puertoServidor);
 
                     //Ahora necesito convertir las direcciones a su forma binaria:
-                    if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+                    if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
                         perror("Address invalid or not supported");
                         return EXIT_FAILURE;
                     }
@@ -548,9 +554,9 @@ int main(int argc, char** argv) {
                     //Para esto reinicio a 0 todo el buffer
                     memset(data, 0, BUFFER_SIZE);
 
-                    snprintf(data, BUFFER_SIZE, "5%d", puerto);
+                    snprintf(data, BUFFER_SIZE, "5%d", puertoCliente);
                     strncat2(data, nombreUsuario, strlen(nombreUsuario));
-                    if(send(socket_handler, data, 3 + cantidadDigitos(puerto) + strlen(nombreUsuario), 0) < 0){
+                    if(send(socket_handler, data, 3 + cantidadDigitos(puertoCliente) + strlen(nombreUsuario), 0) < 0){
                         perror("Couldn't write data to server");
                         return EXIT_FAILURE;
                     }
@@ -595,11 +601,11 @@ int main(int argc, char** argv) {
         //Ahora coloco los valores que sí necesito
         //Primero el protocolo: Ipv4
         serv_addr.sin_family = AF_INET;
-        //Ahora el puerto: SERVER_PORT
-        serv_addr.sin_port = htons(SERVER_PORT);
+        //Ahora el puerto: puertoServidor
+        serv_addr.sin_port = htons(puertoServidor);
 
         //Ahora necesito convertir las direcciones a su forma binaria:
-        if(inet_pton(AF_INET, SERVER_ADDRESS, &serv_addr.sin_addr) <= 0){
+        if(inet_pton(AF_INET, direccionServidor, &serv_addr.sin_addr) <= 0){
             perror("Address invalid or not supported");
             return EXIT_FAILURE;
         }
