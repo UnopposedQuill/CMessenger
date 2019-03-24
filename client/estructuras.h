@@ -37,9 +37,7 @@ struct ListaContactos{
 
 struct Mensaje{
   char * remitente;
-  char * destinatario;
   char * contenido;
-  int estado;
 };
 
 struct NodoMensaje{

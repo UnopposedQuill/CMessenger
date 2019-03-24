@@ -61,11 +61,9 @@ void imprimirListaMensajes(struct ListaMensajes * self){
     struct NodoMensaje * recorreNodos = self->primerNodo;
     while(recorreNodos != NULL){
         printf("Remitente: %s\n"
-               "Destinatario: %s\n"
                "Contenido: %s\n"
                 "-------------------------\n",
                recorreNodos->mensaje->remitente,
-               recorreNodos->mensaje->destinatario,
                recorreNodos->mensaje->contenido);
         recorreNodos = recorreNodos->siguiente;
     }
@@ -87,7 +85,6 @@ void limpiarMensajes(struct ListaMensajes* self){
     self->primerNodo = NULL;
     while(recorreNodos != NULL){
         free(recorreNodos->mensaje->contenido);
-        free(recorreNodos->mensaje->destinatario);
         free(recorreNodos->mensaje->remitente);
         free(recorreNodos->mensaje);
         struct NodoMensaje * nodoALiberar = recorreNodos;

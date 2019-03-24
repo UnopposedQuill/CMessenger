@@ -449,14 +449,8 @@ int main(int argc, char** argv) {
                                     else{
                                         //Conexión al cliente exitosa, cargo los datos del mensaje al buffer
                                         strncpy(buffer, m->remitente, strlen(m->remitente));
-                                        strncat2(buffer, m->destinatario, strlen(m->destinatario));
-                                        buscador = buffer;
-                                        while(*(buscador++));
-                                        while(*(buscador++));
-                                        strncpy(buscador, m->contenido, strlen(m->contenido));
-                                        if((valread = send(socket_handler, buffer, 3+strlen(m->remitente)+strlen(m->destinatario)+strlen(m->contenido),0)) > 0){
-                                            //Mensaje enviado correctamente
-                                            m->estado = 1;
+                                        strncat2(buffer, m->contenido, strlen(m->contenido));
+                                        if((valread = send(socket_handler, buffer, 1+strlen(m->remitente)+strlen(m->contenido),0)) > 0){
                                             printf("Success upon delivering message instantly\n");
                                         }
                                         else{
@@ -482,7 +476,7 @@ int main(int argc, char** argv) {
                         else{
                             printf("Login with an unexisting user\n");
                             //Le notifico que hubo un error
-                            strncpy(buffer, "-1", 2);
+                            strncpy(buffer, "0", 1);
                             if((valread = send(new_socket, buffer, 2, 0)) < 0){
                                 perror("Error while notifying failure to client upon login");
                             }

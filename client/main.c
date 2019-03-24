@@ -63,14 +63,12 @@ int main(int argc, char** argv) {
     }
     
 
-    //Dos descriptores que se usarán para la tubería entre ambos procesos del fork
-    int descriptorAHijo[2];
-    int descriptorAPadre[2];
+    //El descriptor que se usarán para la tubería entre ambos procesos del fork
+    int descriptor[2];
     char bufferTuberia[BUFFER_SIZE];
 
-    //Creo las tuberías
-    pipe(descriptorAHijo);
-    pipe(descriptorAPadre);
+    //Creo la tubería
+    pipe(descriptor);
 
     //La dirección del socket del servidor
     struct sockaddr_in serv_addr;
@@ -225,10 +223,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     
-    struct ListaMensajes mensajes = {NULL};
     struct ListaContactos contactos = {NULL};
-    
-    struct NodoMensaje * nm;
     struct NodoContactos * nc;
     
     char * buscador;
@@ -286,11 +281,10 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         printf("Initialization Success, listening on port %d\n", puerto);
-        close(descriptorAHijo[ESCRIBIR]);
-        close(descriptorAPadre[LEER]);
+        close(descriptor[LEER]);
         //debo asegurarme de actualizarlo
         snprintf(bufferTuberia, cantidadDigitos(puerto)+1, "%d", puerto);
-        write(descriptorAPadre[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto));
+        write(descriptor[ESCRIBIR], bufferTuberia, cantidadDigitos(puerto));
         printf("All parameters have been notified\n");
         memset(data, 0, BUFFER_SIZE);
         memset(bufferTuberia, 0, BUFFER_SIZE);
@@ -308,48 +302,12 @@ int main(int argc, char** argv) {
                 }
                 else{
                     printf("New Message incoming\n");
-                    nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
-                    
                     buscador = data;
-                    for(int i = 0;i < strlen2(data);i++){
-                        printf("%d-",*(buscador+i));
-                    }
-                    
-                    printf("%s\n", buscador);
-                    nm->mensaje->remitente = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    strncpy(nm->mensaje->remitente, buscador, strlen(buscador));
-                    
                     while(*(buscador++));
-                    printf("%s\n", buscador);
-                    nm->mensaje->destinatario = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    strncpy(nm->mensaje->destinatario, buscador, strlen(buscador));
-                    
-                    while(*(buscador++));
-                    printf("%s\n", buscador);
-                    nm->mensaje->contenido = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                    strncpy(nm->mensaje->contenido, buscador, strlen(buscador));
-                    
-                    insertarMensajeAlInicio(&mensajes, nm);
-                    printf("New Message added to buffer\n");
-                }
-                if((valread = recv(descriptorAHijo[LEER], data, BUFFER_SIZE, 0)) > 0){
-                    snprintf(data, cantidadDigitos(cantidadMensajes(&mensajes)), "%d", cantidadMensajes(&mensajes));
-                    send(descriptorAPadre[ESCRIBIR], data, cantidadDigitos(cantidadMensajes(&mensajes)), 0);
-                    while(cantidadMensajes(&mensajes) > 0){
-                        nm = pop(&mensajes);
-                        strncpy(data, nm->mensaje->remitente, strlen(nm->mensaje->remitente));
-                        strncat2(data, nm->mensaje->destinatario, strlen(nm->mensaje->remitente));
-                        buscador = data;
-                        while(*(buscador++));
-                        while(*(buscador++));
-                        strncpy(data, nm->mensaje->contenido, strlen(nm->mensaje->contenido));
-                        free(nm->mensaje->remitente);
-                        free(nm->mensaje->destinatario);
-                        free(nm->mensaje->contenido);
-                        free(nm->mensaje);
-                        free(nm);
-                        write(descriptorAPadre[ESCRIBIR], data, strlen2(data));
-                    }
+                    printf("Nuevo Mensaje Recibido:\n"
+                            "Remitente: %s\n"
+                            "Contenido: \n"
+                            "%s\n", data, buscador);
                 }
                 memset(data, 0, BUFFER_SIZE);
                 memset(bufferTuberia, 0, BUFFER_SIZE);
@@ -358,11 +316,10 @@ int main(int argc, char** argv) {
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
     }
     else{
-        close(descriptorAPadre[ESCRIBIR]);
-        close(descriptorAHijo[LEER]);
+        close(descriptor[ESCRIBIR]);
         memset(bufferTuberia, 0, BUFFER_SIZE);
         //Hasta que el hijo no le notifique cuál puerto seleccionó, no avanza
-        while((read(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE)) < 0);
+        while((read(descriptor[LEER], bufferTuberia, BUFFER_SIZE)) < 0);
         sscanf(bufferTuberia, "%d", &puerto);
         //Ahora intentaré hacer el socket nuevo para poder enviarlo al servidor
         if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -414,19 +371,18 @@ int main(int argc, char** argv) {
             }
         }
         
-        int cantidadElementos = 0;
+        //int cantidadElementos = 0;
         char directiva = 0;
-        while(directiva != 4){
+        while(directiva != 3){
             //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
             printf("\nBienvenido al cliente de CMessenger."
                     "\n"
                     "\n"
                     "1. Agregar Contacto\n"
-                    "2. Ver Mensajes\n"
-                    "3. Enviar Mensaje\n"
-                    "4. Cerrar Sesion y salir\n"
-                    "5. Actualizar Datos de Sesión\n"
-                    "6. Ver contactos\n");
+                    "2. Enviar Mensaje\n"
+                    "3. Cerrar Sesion y salir\n"
+                    "4. Actualizar Datos de Sesión\n"
+                    "5. Ver contactos\n");
             scanf("%1d", &directiva);
             switch(directiva){
                 case 1:{
@@ -490,32 +446,6 @@ int main(int argc, char** argv) {
                     break;
                 }
                 case 2:{
-                    //Ver los mensajes, primero cargo cualquier mensaje que haya quedado del lado del
-                    //Proceso hijo, servicio nativo del cliente, sin necesidad de usar el servidor
-                    strncpy(bufferTuberia, "1", 1);
-                    write(descriptorAHijo[ESCRIBIR], bufferTuberia, BUFFER_SIZE);
-                    read(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE);
-                    
-                    //Muevo lo que leí a la cantidad de elementos
-                    sscanf(bufferTuberia, "%d", BUFFER_SIZE, &cantidadElementos);
-                    while(cantidadElementos > 0){
-                        recv(descriptorAPadre[LEER], bufferTuberia, BUFFER_SIZE, 0);
-                        nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
-                        buscador = bufferTuberia;
-                        nm->mensaje->remitente = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        strncpy(nm->mensaje->remitente, buscador, strlen(buscador));
-                        while(*(buscador++));
-                        nm->mensaje->destinatario = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        strncpy(nm->mensaje->destinatario, buscador, strlen(buscador));
-                        while(*(buscador++));
-                        nm->mensaje->contenido = (char *) calloc(strlen(buscador)+1, sizeof(char));
-                        strncpy(nm->mensaje->contenido, buscador, strlen(buscador));
-                        insertarMensajeAlInicio(&mensajes, nm);
-                    }
-                    imprimirListaMensajes(&mensajes);
-                    break;
-                }
-                case 3:{
                     //Enviar Mensaje, servicio numero 4 del servidor
                     //Primero necesito el remitente, destinatario y el contenido, el remitente es conseguible a partir del nombre de usuario
                     char destinatario[128], contenido[256];
@@ -584,11 +514,11 @@ int main(int argc, char** argv) {
                     close(new_socket);
                     break;
                 }
-                case 4:{
+                case 3:{
                     //Salir, no tengo que hacer nada más que este break
                     break;
                 }
-                case 5:{
+                case 4:{
                     //Actualizar la información de la sesión
                     if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
                         perror("Socket creation error");
@@ -640,7 +570,7 @@ int main(int argc, char** argv) {
                     
                     break;
                 }
-                case 6:{
+                case 5:{
                     //mostrar la lista de contactos, función interna del cliente
                     imprimirListaContactos(&contactos);
                     break;
@@ -699,10 +629,8 @@ int main(int argc, char** argv) {
                 printf("No se pudo cerrar la sesión\n");
             }
         }
-        
         printf("Wiping data...\n");
         limpiarContactos(&contactos);
-        limpiarMensajes(&mensajes);
         printf("Exiting...\n");
         return EXIT_SUCCESS;
     }
