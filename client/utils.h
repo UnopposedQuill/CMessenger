@@ -13,9 +13,11 @@
 
 #ifndef UTILS_H
 #define UTILS_H
+#include <stdio.h>
 
 int cantidadDigitos(int numero);
 char * strncat2(char *,const char *, int);
 int strlen2(const char *);
+void seekToEnd();
 
 #endif /* UTILS_H */

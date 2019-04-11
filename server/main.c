@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
                             strncpy(nc->cliente->nombreUsuario, buscador, valread - strlen(buffer) - 1);
                             
                             insertarClienteAlInicio(&clientes, nc);
-                            printf("Successful client insertion\n");
+                            printf("Successful client insertion: %s\n", c->nombreUsuario);
 
                             //Ahora me falta notificar al cliente que su inserción fue exitosa
                             //Como no tiene datos que enviar, sólo le envío un caracter

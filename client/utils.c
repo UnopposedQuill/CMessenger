@@ -52,3 +52,8 @@ int strlen2(const char * s){
     }
     return contador;
 }
+
+void seekToEnd(){
+    int c;
+    while((c = getchar()) != '\n' && c != EOF);
+}

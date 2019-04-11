@@ -30,6 +30,9 @@
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
 
+//El buffer de entrada y salida estándar
+#define IO_BUFFER_SIZE 256
+
 //Finalmente la dirección en la que supuestamente está el servidor, también se cambiará desde el .ini
 //#define SERVER_ADDRESS "127.0.0.1"
 
@@ -87,9 +90,13 @@ int main(int argc, char** argv) {
     char data[BUFFER_SIZE];
     memset(data, 0, BUFFER_SIZE);
 
+    //El buffer que contendrá los datos de IO
+    char ioBuffer[IO_BUFFER_SIZE];
+    
     printf("Bienvenido al cliente de CMessenger.\n\n1. Registrarse\n2. Iniciar Sesión\n");
     int opcion;
     int datosMenu = scanf("%d", &opcion);
+    seekToEnd();
     if(datosMenu <= 0){
         perror("Invalid Selection");
         return EXIT_FAILURE;
@@ -98,8 +105,9 @@ int main(int argc, char** argv) {
     printf("Ingrese su nombre de usuario (Máximo 20 caracteres): ");
     char nombreUsuario[21];
 
-    datosMenu = scanf("%20s", nombreUsuario);
-    if(datosMenu <= 0){
+    fgets(ioBuffer, 20, stdin);
+    sscanf(ioBuffer, "%s", nombreUsuario);
+    if(strlen(ioBuffer) <= 0){
         perror("Invalid input");
         return EXIT_FAILURE;
     }
@@ -379,8 +387,10 @@ int main(int argc, char** argv) {
         
         //int cantidadElementos = 0;
         char directiva = 0;
-        while(directiva != 3){
+        
+        while(directiva != '3'){
             //Este es el proceso padre, ahora mismo voy a crear un menú capaz de utilizar todas las funcionalidades del cliente
+            memset(ioBuffer, 0, IO_BUFFER_SIZE);
             printf("\nBienvenido al cliente de CMessenger."
                     "\n"
                     "\n"
@@ -389,9 +399,11 @@ int main(int argc, char** argv) {
                     "3. Cerrar Sesion y salir\n"
                     "4. Actualizar Datos de Sesión\n"
                     "5. Ver contactos\n");
-            scanf("%1d", &directiva);
+            while(fgets(ioBuffer, 256, stdin) == NULL);
+            sscanf(ioBuffer, "%c", &directiva);
+            
             switch(directiva){
-                case 1:{
+                case '1':{
                     //Agregar un nuevo contacto, servicio 1 del servidor
                     
                     //Ahora intentaré hacer el socket nuevo
@@ -424,7 +436,9 @@ int main(int argc, char** argv) {
                     memset(data, 0, BUFFER_SIZE);
                     printf("Digite el nombre del Usuario: ");
                     char nombreContacto[128];
-                    scanf("%s", nombreContacto);
+                    fgets(ioBuffer, 127, stdin);
+                    sscanf(ioBuffer, "%s", nombreContacto);
+                    
                     snprintf(data, BUFFER_SIZE, "1%s", nombreUsuario);
                     strncat2(data, nombreContacto, strlen(nombreContacto));
 
@@ -451,12 +465,14 @@ int main(int argc, char** argv) {
                     }
                     break;
                 }
-                case 2:{
+                case '2':{
                     //Enviar Mensaje, servicio numero 4 del servidor
                     //Primero necesito el remitente, destinatario y el contenido, el remitente es conseguible a partir del nombre de usuario
                     char destinatario[128], contenido[256];
                     printf("Ingrese el destinatario: ");
-                    scanf("%s", destinatario);
+                    fgets(ioBuffer, 128, stdin);
+                    sscanf(ioBuffer, "%s", destinatario);
+                    
                     //Ahora necesito que el destinatario exista
                     if(!existeContacto(&contactos, destinatario)){
                         printf("El destinatario no está en la lista de contactos, cancelando operación");
@@ -464,7 +480,8 @@ int main(int argc, char** argv) {
                     }
                     //Existe en los contactos
                     printf("Ingrese el contenido del mensaje:\n");
-                    scanf("%s", contenido);
+                    fgets(ioBuffer, 256, stdin);
+                    sscanf(ioBuffer, "%s", contenido);
                     
                     //Ahora intentaré hacer el socket nuevo
                     if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -520,11 +537,11 @@ int main(int argc, char** argv) {
                     close(new_socket);
                     break;
                 }
-                case 3:{
+                case '3':{
                     //Salir, no tengo que hacer nada más que este break
                     break;
                 }
-                case 4:{
+                case '4':{
                     //Actualizar la información de la sesión
                     if((socket_handler = socket(AF_INET, SOCK_STREAM, 0)) < 0){
                         perror("Socket creation error");
@@ -576,9 +593,12 @@ int main(int argc, char** argv) {
                     
                     break;
                 }
-                case 5:{
+                case '5':{
                     //mostrar la lista de contactos, función interna del cliente
                     imprimirListaContactos(&contactos);
+                    break;
+                }
+                case '\n':{
                     break;
                 }
                 default:{
