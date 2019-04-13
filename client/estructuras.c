@@ -22,7 +22,6 @@ void limpiarContactos(struct ListaContactos* self){
     struct NodoContactos * recorreNodos = self->primerNodo;
     self->primerNodo = NULL;
     while(recorreNodos != NULL){
-        free(recorreNodos->nombreContacto);
         struct NodoContactos * nodoALiberar = recorreNodos;
         free(nodoALiberar);
         recorreNodos = recorreNodos->siguiente;

@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
     
     printf("Bienvenido al cliente de CMessenger.\n\n1. Registrarse\n2. Iniciar Sesión\n");
     int opcion;
-    int datosMenu = scanf("%d", &opcion);
-    seekToEnd();
+    fgets(ioBuffer, IO_BUFFER_SIZE, stdin);
+    int datosMenu = sscanf(ioBuffer, "%d", &opcion);
     if(datosMenu <= 0){
         perror("Invalid Selection");
         return EXIT_FAILURE;
@@ -105,8 +105,8 @@ int main(int argc, char** argv) {
     printf("Ingrese su nombre de usuario (Máximo 20 caracteres): ");
     char nombreUsuario[21];
 
-    fgets(ioBuffer, 20, stdin);
-    sscanf(ioBuffer, "%s", nombreUsuario);
+    fgets(ioBuffer, 21, stdin);
+    datosMenu = sscanf(ioBuffer, "%s", nombreUsuario);
     if(strlen(ioBuffer) <= 0){
         perror("Invalid input");
         return EXIT_FAILURE;
@@ -399,7 +399,10 @@ int main(int argc, char** argv) {
                     "3. Cerrar Sesion y salir\n"
                     "4. Actualizar Datos de Sesión\n"
                     "5. Ver contactos\n");
-            while(fgets(ioBuffer, 256, stdin) == NULL);
+            if(fgets(ioBuffer, 256, stdin) == NULL){
+                perror("Directive reading error");
+                return EXIT_FAILURE;
+            }
             sscanf(ioBuffer, "%c", &directiva);
             
             switch(directiva){
@@ -534,7 +537,7 @@ int main(int argc, char** argv) {
                         printf("El mensaje no fue enviado\n");
                     }
                     
-                    close(new_socket);
+                    close(socket_handler);
                     break;
                 }
                 case '3':{
