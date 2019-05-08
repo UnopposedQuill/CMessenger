@@ -25,7 +25,7 @@
 //#define SERVER_PORT 15000
 //#define CLIENT_PORT 15001
 
-#define MAX_WAITING_CONNECTIONS 3
+//#define MAX_WAITING_CONNECTIONS 3
 
 //También el tamaño del buffer
 #define BUFFER_SIZE 1024
@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
      * server_fd: El socket principal del servidor
      * new_socket: El socket que intenta comunicarse con el servidor
      */
-    int server_fd, new_socket, valread;
+    int server_fd, socket_handler, valread;
 
     FILE *archivo;
-    int puertoCliente, puertoServidor;
+    int puertoCliente, puertoServidor, maxWaitingConnections;
     char direccionServidor[64] = "127.0.0.1";
     
     archivo = fopen("configFile.ini","r");
@@ -60,13 +60,16 @@ int main(int argc, char** argv) {
         printf("\nError de apertura del archivo. Utilizando datos por defecto\n\n");
         puertoCliente = 15001;
         puertoServidor = 15000;
+        maxWaitingConnections = 3;
     }
     else{
         fscanf(archivo, 
                 "[SETUP]\n"
                 "Port=%d\n"
                 "ServerPort=%d\n"
-                "ServerAddress=%s\n", &puertoCliente, &puertoServidor, direccionServidor);
+                "ServerAddress=%s\n"
+                "MaxWaitingConnections=%d",
+                &puertoCliente, &puertoServidor, direccionServidor, &maxWaitingConnections);
         //printf("%d\n", puertoCliente);
         fclose(archivo);
         printf("Archivo de inicialización leído correctamente\n");
@@ -82,9 +85,6 @@ int main(int argc, char** argv) {
 
     //La dirección del socket del servidor
     struct sockaddr_in serv_addr;
-
-    //El manejador del socket, y una variable que guardará la cantidad de bytes que de verdad se leen
-    int socket_handler = 0;
 
     //El buffer que contendrá los datos que se le enviarán al servidor
     char data[BUFFER_SIZE];
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
         printf("Puerto seleccionado: %d\n", puertoCliente);
 
         //Ahora falta señalarle al SO que va a escuchar del puertoCliente, con un máximo de conexiones pendientes
-        if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
+        if(listen(server_fd, maxWaitingConnections) < 0){
             perror("Socket couldn't be signaled to listen");
             return EXIT_FAILURE;
         }
@@ -304,14 +304,14 @@ int main(int argc, char** argv) {
         memset(bufferTuberia, 0, BUFFER_SIZE);
         
         while(1){
-            if((new_socket = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
+            if((socket_handler = accept(server_fd, (struct sockaddr*) &address, (socklen_t*) &addrlen)) < 0){
                 //No pudo aceptarla
                 perror("\nError upon accepting a new connection");
             }
             else{
                 //Pudo aceptarla, intento leer los datos
                 //Primero tengo que leer el primer byte, el cual me dirá qué acción tengo que tomar
-                if((valread = recv(new_socket, data, BUFFER_SIZE, 0)) < 0){
+                if((valread = recv(socket_handler, data, BUFFER_SIZE, 0)) < 0){
                     perror("Error upon reading new data");
                 }
                 else{
@@ -325,6 +325,7 @@ int main(int argc, char** argv) {
                 }
                 memset(data, 0, BUFFER_SIZE);
                 memset(bufferTuberia, 0, BUFFER_SIZE);
+                close(socket_handler);
             }
         }
     //Es mayor a cero, es el proceso pariente, que va a desplegar el menú y funciones
@@ -378,6 +379,7 @@ int main(int argc, char** argv) {
             }
             else if(data[0] == '1'){
                 printf("Datos de recepción configurados exitosamente\n");
+                close(socket_handler);
             }
             else{
                 printf("No se pudo configurar los datos de recepción\n");
@@ -458,7 +460,7 @@ int main(int argc, char** argv) {
                             //tengo que agregar el contacto a este lado
                             nc = (struct NodoContactos *)calloc(1, sizeof(struct NodoContactos));
                             nc->nombreContacto = (char *)calloc(strlen(nombreContacto)+1, sizeof(char));
-                            nc->nombreContacto = nombreContacto;
+                            strncpy(nc->nombreContacto, nombreContacto, strlen(nombreContacto));
                             insertarContactoAlInicio(&contactos, nc);
                             printf("Contacto agregado exitosamente");
                         }
@@ -466,6 +468,8 @@ int main(int argc, char** argv) {
                             printf("No se pudo agregar el contacto");
                         }
                     }
+                    memset(data, 0, BUFFER_SIZE);
+                    close(socket_handler);
                     break;
                 }
                 case '2':{
@@ -514,7 +518,7 @@ int main(int argc, char** argv) {
                     
                     //Ahora paso los datos a data para enviarlos
                     strncpy(data, "4", 1);
-                    strncat2(data, nombreUsuario, strlen(nombreUsuario));
+                    strncat(data, nombreUsuario, strlen(nombreUsuario));
                     strncat2(data, destinatario, strlen(destinatario));
                     buscador = data;
                     while(*(buscador++));
@@ -536,7 +540,7 @@ int main(int argc, char** argv) {
                         //Envío incorrecto
                         printf("El mensaje no fue enviado\n");
                     }
-                    
+                    memset(data, 0, BUFFER_SIZE);
                     close(socket_handler);
                     break;
                 }
@@ -592,7 +596,7 @@ int main(int argc, char** argv) {
                             printf("No se pudo configurar los datos de recepción\n");
                         }
                     }
-                    close(new_socket);
+                    close(socket_handler);
                     
                     break;
                 }

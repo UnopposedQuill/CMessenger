@@ -44,6 +44,7 @@ int existeContacto(struct ListaContactos * self, const char * nombreContacto){
         if(strcmp(recorreNodos->nombreContacto, nombreContacto) == 0){
             return 1;
         }
+        recorreNodos = recorreNodos->siguiente;
     }
     return 0;
 }

@@ -30,9 +30,9 @@
 #include "utils.h"
 
 //Me interesa colocar el puerto que usaré como una macro para colocarla alrededor del archivo
-#define PORT 15000
+//#define PORT 15000
 //También colocar la cantidad de conexiones a la espera
-#define MAX_WAITING_CONNECTIONS 3
+//#define MAX_WAITING_CONNECTIONS 3
 //Finalmente el tamaño del buffer
 #define BUFFER_SIZE 1024
 
@@ -49,6 +49,25 @@ void intHandler(int signal){
  * 
  */
 int main(int argc, char** argv) {
+    
+    FILE *archivo;
+    int maximoConexionesPendientes, puertoServidor;
+    
+    archivo = fopen("configFile.ini","r");
+    if (archivo == NULL){
+        printf("\nError de apertura del archivo. Utilizando datos por defecto\n\n");
+        puertoServidor = 15000;
+        maximoConexionesPendientes = 0;
+    }
+    else{
+        fscanf(archivo, 
+                "[SETUP]\n"
+                "Port=%d\n"
+                "MaxWaitingConnections=%d\n", &puertoServidor, &maximoConexionesPendientes);
+        //printf("%d\n", puertoCliente);
+        fclose(archivo);
+        printf("Archivo de inicialización leído correctamente\n");
+    }
     
     //Primero crea los sitios donde guardará los datos del servidor
     struct ListaClientes clientes = {NULL};
@@ -85,7 +104,7 @@ int main(int argc, char** argv) {
     //En este punto ya es seguro colocar la ip, puertos y protocolos de los que deseo leer
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(puertoServidor);
     
     //Ahora ya uniré el socket y la dirección, necesito el handler del socket, la dirección
     //a unir y finalmente la longitud de la dirección
@@ -95,11 +114,11 @@ int main(int argc, char** argv) {
     }
     
     //Ahora falta señalarle al SO que va a escuchar del puerto, con un máximo de conexiones pendientes
-    if(listen(server_fd, MAX_WAITING_CONNECTIONS) < 0){
+    if(listen(server_fd, maximoConexionesPendientes) < 0){
         perror("Socket couldn't be signaled to listen");
         return EXIT_FAILURE;
     }
-    printf("Initialization Success, listening on port %d\n", PORT);
+    printf("Initialization Success, listening on port %d\n", puertoServidor);
     
     //Este buscador lo uso para buscar cadenas dentro de BUFFER, sin tener que moverlo
     char * buscador;
@@ -142,15 +161,15 @@ int main(int argc, char** argv) {
                         nc = (struct NodoCliente *)calloc(1, sizeof(struct NodoCliente));
                         //Asignar el cliente al nodo...
                         nc->cliente = c;
-                        
+
                         //ahora agrego la dirección de la cual me escribe el new_socket
                         //Primero creo un arreglo donde se guardará la información
                         //Uso sólo Ipv4, así que ocupo 16 caracteres para la ip, y uno para finalizar
                         c->ipRegistrada = (char *)calloc(17, sizeof(char));
-                        
+
                         //En este punto la dirección debería seguir guardada en la información que usé en el accept
                         strncpy(c->ipRegistrada, inet_ntoa(address.sin_addr), 16);
-                        
+
                         //Ahora intento leer el supuesto puerto desde el cual desea leer lo que le envíe
                         if((valread = read(new_socket, buffer, BUFFER_SIZE)) > 0){
                             c->puertoRegistrado = atoi(buffer);
@@ -158,18 +177,18 @@ int main(int argc, char** argv) {
                             //donde termina el número del puerto
                             buscador = buffer;
                             while(*(buscador++));
-                            
+
                             c->nombreUsuario = (char *) calloc(1, valread - strlen(buffer) - 1);
                             c->contactos = (struct ListaClientes *) calloc(1, sizeof(struct ListaClientes));
                             strncpy(nc->cliente->nombreUsuario, buscador, valread - strlen(buffer) - 1);
-                            
+
                             insertarClienteAlInicio(&clientes, nc);
                             printf("Successful client insertion: %s\n", c->nombreUsuario);
 
                             //Ahora me falta notificar al cliente que su inserción fue exitosa
                             //Como no tiene datos que enviar, sólo le envío un caracter
                             strncpy(buffer, "1", 1);
-                            
+
                             if((valread = send(new_socket, buffer, 1, 0)) < 0){
                                 perror("Error while notifying success to client upon insertion");
                             }
@@ -245,16 +264,16 @@ int main(int argc, char** argv) {
                                 if((valread = recv(new_socket, buffer, sizeof(int), 0)) > 0){
                                     c->puertoRegistrado = atoi(buffer);
                                     printf("Successful client login\n");
-                                    
+
                                     //Primero el header que dice login exitoso
                                     strncpy(buffer, "1",1);
-                                    
+
                                     //Ahora me falta enviar al cliente todos sus datos
                                     //Primero tengo que enviar todos los datos de los contactos que tiene el usuario
                                     int cantidadElementosAEnviar = cantidadClientes(c->contactos);
                                     int cantidadIntentosFallidos = 0;
                                     snprintf(buffer, cantidadDigitos(cantidadElementosAEnviar), "%d", cantidadElementosAEnviar);
-                                    
+
                                     if((valread = send(new_socket, buffer, 1 + cantidadDigitos(cantidadElementosAEnviar), 0)) > 0){
                                         //Voy a usar nc para recorrer toda la lista de contactos del cliente
                                         nc = c->contactos->primerNodo;
@@ -273,7 +292,7 @@ int main(int argc, char** argv) {
                                         }
                                         printf("Contacts delivery successfull\n");
                                         cantidadElementosAEnviar = cantidadMensajesUsuario(&mensajes, c->nombreUsuario);
-                                        
+
                                         nm = mensajes.primerNodo;
                                         while(nm != NULL){
                                             if(strcmp(c->nombreUsuario, nm->mensaje->destinatario) == 0){
@@ -297,7 +316,7 @@ int main(int argc, char** argv) {
                                             else{
                                                 nc = nc->siguiente;
                                             }
-                                            
+
                                         }
                                         printf("Client login operation behaved normally\n");
                                     }
@@ -374,34 +393,34 @@ int main(int argc, char** argv) {
                             //Esto almacenará el destinatario
                             nombreDestinatario = buffer;
                             while(*(nombreDestinatario++));
-                            
+
                             //Esto almacenará el contenido
                             contenido = nombreDestinatario;
                             while(*(contenido++));
-                            
+
                             //Si existe dentro de los contactos
                             if(existeCliente(c->contactos, nombreDestinatario)){
                                 //Existe, procedo a almacenarlo, y luego ver si puedo enviarlo
                                 //Primero el paquete
                                 nm = (struct NodoMensaje *) calloc(1, sizeof(struct NodoMensaje));
-                                
+
                                 //Luego el mensaje
                                 m = (struct Mensaje *) calloc(1, sizeof(struct Mensaje));
                                 m->remitente = (char *) calloc(strlen(buffer)+1, sizeof(char));
                                 m->destinatario = (char *) calloc(strlen(nombreDestinatario)+1, sizeof(char));
                                 m->contenido = (char *) calloc(strlen(contenido)+1, sizeof(char));
-                                
+
                                 strncpy(m->remitente, buffer, strlen(buffer));
                                 strncpy(m->destinatario, nombreDestinatario, strlen(nombreDestinatario));
                                 strncpy(m->contenido, contenido, strlen(contenido));
-                                
+
                                 //Coloco el mensaje en el paquete
                                 nm->mensaje = m;
-                                
+
                                 //Coloco el paquete en la base
                                 insertarMensajeAlInicio(&mensajes, nm);
                                 printf("Message insertion successfull\n");
-                                
+
                                 //Ahora a notificar el envío del mensaje
                                 strncpy(buffer, "1", 1);
                                 if((valread = send(new_socket, buffer, 1, 0)) < 0){
@@ -410,11 +429,11 @@ int main(int argc, char** argv) {
                                 else{
                                     printf("Client message delivery informed\n");
                                 }
-                                
+
                                 //Ahora procedo a ver si puedo enviar de una vez el mensaje
                                 //Para eso busco el destinatario
                                 c = buscar(c->contactos, nombreDestinatario);
-                                
+
                                 //Si esto se cumple, entonces está disponible para enviar el mensaje
                                 if(c->ipRegistrada != NULL && c->puertoRegistrado != -1){
 
@@ -474,14 +493,14 @@ int main(int argc, char** argv) {
                             }
                         }
                         else{
-                            printf("Login with an unexisting user\n");
+                            printf("Unexisting user sending a message\n");
                             //Le notifico que hubo un error
                             strncpy(buffer, "0", 1);
                             if((valread = send(new_socket, buffer, 2, 0)) < 0){
-                                perror("Error while notifying failure to client upon login");
+                                perror("Error while notifying failure to unregistered client");
                             }
                             else{
-                                printf("Client login failure informed\n");
+                                printf("Unregistered user failure informed\n");
                             }
                         }
                         memset(buffer, 0, BUFFER_SIZE);
@@ -513,9 +532,9 @@ int main(int argc, char** argv) {
                         printf("Action not implemented yet");
                         break;
                     }
-                    //Me interesa borrar todo del buffer
-                    memset(buffer, 0, BUFFER_SIZE);
                 }
+                //Me interesa borrar todo del buffer
+                memset(buffer, 0, BUFFER_SIZE);
                 //printf("%s\n", buffer);
                 
                 //Ahora cierro el socket
